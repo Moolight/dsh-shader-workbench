@@ -1,0 +1,8 @@
+# 统一行尾：仓库里一律 LF，检出时按平台（Windows 上 git 会自动转 CRLF）
+* text=auto eol=lf
+
+# 二进制别碰
+*.png binary
+*.jpg binary
+*.webp binary
+*.zip binary

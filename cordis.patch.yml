@@ -1,0 +1,4 @@
+- insert:
+    - id: shader-workbench
+      name: dsh-shader-workbench
+      config: {}

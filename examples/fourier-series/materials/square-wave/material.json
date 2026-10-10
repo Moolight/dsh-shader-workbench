@@ -1,0 +1,16 @@
+{
+  "id": "mat_mv2jr5ub1k1z7",
+  "name": "傅里叶级数：方波 = 正弦叠加",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "square-wave.frag"
+  },
+  "uniforms": {},
+  "textures": [],
+  "passes": [
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:26:03.339Z"
+}

@@ -1,0 +1,1182 @@
+{
+  "id": "g_mv2mo7yy3r42c",
+  "name": "IFS 隧道（原版搬移 + 重复组 99 次）",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2mo7yy66nsm",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2mo7yy9g7i7",
+      "type": "time",
+      "x": 0,
+      "y": 200,
+      "params": {
+        "scale": 1
+      }
+    },
+    {
+      "id": "n_mv2mo7yy8l0rw",
+      "type": "custom",
+      "x": 260,
+      "y": 0,
+      "params": {
+        "expr": "vec4(($in.a.xy * iResolution.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy53tn8",
+      "type": "custom",
+      "x": 520,
+      "y": 0,
+      "params": {
+        "expr": "vec4(normalize(cross(vec3(0.0, 0.0, -1.0), vec3(sin($in.b.x), 1.0, 0.0)) * $in.a.x + vec3(sin($in.b.x), 1.0, 0.0) * $in.a.y + vec3(0.0, 0.0, -1.0)), 0.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy21tak",
+      "type": "custom",
+      "x": 520,
+      "y": 200,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy5tkkx",
+      "type": "custom",
+      "x": 520,
+      "y": 340,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy0y235",
+      "type": "custom",
+      "x": 520,
+      "y": 480,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy0w0th",
+      "type": "group",
+      "x": 820,
+      "y": 100,
+      "params": {
+        "repeat": 99,
+        "graph": {
+          "name": "累积一步（重复 99 次）",
+          "carries": [
+            "dist",
+            "acc",
+            "acc2"
+          ],
+          "inputs": [
+            {
+              "id": "ray",
+              "label": "ray",
+              "type": "vec4"
+            },
+            {
+              "id": "t",
+              "label": "t",
+              "type": "float"
+            },
+            {
+              "id": "dist",
+              "label": "dist",
+              "type": "float"
+            },
+            {
+              "id": "acc",
+              "label": "acc",
+              "type": "vec4"
+            },
+            {
+              "id": "acc2",
+              "label": "acc2",
+              "type": "vec4"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "dist",
+              "label": "dist",
+              "type": "float"
+            },
+            {
+              "id": "acc",
+              "label": "acc",
+              "type": "vec4"
+            },
+            {
+              "id": "acc2",
+              "label": "acc2",
+              "type": "vec4"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "gi_ray",
+              "type": "groupInput",
+              "x": -420,
+              "y": 0,
+              "params": {
+                "port": "ray",
+                "type": "vec4"
+              }
+            },
+            {
+              "id": "gi_t",
+              "type": "groupInput",
+              "x": -420,
+              "y": 150,
+              "params": {
+                "port": "t",
+                "type": "float"
+              }
+            },
+            {
+              "id": "gi_dist",
+              "type": "groupInput",
+              "x": -420,
+              "y": 300,
+              "params": {
+                "port": "dist",
+                "type": "float"
+              }
+            },
+            {
+              "id": "gi_acc",
+              "type": "groupInput",
+              "x": -420,
+              "y": 450,
+              "params": {
+                "port": "acc",
+                "type": "vec4"
+              }
+            },
+            {
+              "id": "gi_acc2",
+              "type": "groupInput",
+              "x": -420,
+              "y": 600,
+              "params": {
+                "port": "acc2",
+                "type": "vec4"
+              }
+            },
+            {
+              "id": "pos",
+              "type": "custom",
+              "x": -140,
+              "y": 0,
+              "params": {
+                "expr": "vec4(vec3(0.0, 0.0, -3.0 * $in.c) + $in.a.xyz * $in.b.x, 0.0)"
+              }
+            },
+            {
+              "id": "field",
+              "type": "group",
+              "x": 120,
+              "y": 0,
+              "params": {
+                "graph": {
+                  "name": "IFS 场（平铺 + 5 重对称 + 5 次折叠 + box SDF）",
+                  "inputs": [
+                    {
+                      "id": "pos",
+                      "label": "pos",
+                      "type": "vec4"
+                    },
+                    {
+                      "id": "t",
+                      "label": "t",
+                      "type": "float"
+                    }
+                  ],
+                  "outputs": [
+                    {
+                      "id": "d",
+                      "label": "距离",
+                      "type": "float"
+                    }
+                  ],
+                  "nodes": [
+                    {
+                      "id": "gi_pos",
+                      "type": "groupInput",
+                      "x": -400,
+                      "y": 0,
+                      "params": {
+                        "port": "pos",
+                        "type": "vec4"
+                      }
+                    },
+                    {
+                      "id": "gi_t",
+                      "type": "groupInput",
+                      "x": -400,
+                      "y": 160,
+                      "params": {
+                        "port": "t",
+                        "type": "float"
+                      }
+                    },
+                    {
+                      "id": "tile",
+                      "type": "custom",
+                      "x": -120,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(vec2((mod($in.a.x - 5.0, 10.0) - 5.0), (mod($in.a.y - 5.0, 10.0) - 5.0)) * mat2(cos((-(floor((atan((mod($in.a.x - 5.0, 10.0) - 5.0), (mod($in.a.y - 5.0, 10.0) - 5.0)) + 0.6283185307179586) / 1.2566370614359172) * 1.2566370614359172))), sin((-(floor((atan((mod($in.a.x - 5.0, 10.0) - 5.0), (mod($in.a.y - 5.0, 10.0) - 5.0)) + 0.6283185307179586) / 1.2566370614359172) * 1.2566370614359172))), -sin((-(floor((atan((mod($in.a.x - 5.0, 10.0) - 5.0), (mod($in.a.y - 5.0, 10.0) - 5.0)) + 0.6283185307179586) / 1.2566370614359172) * 1.2566370614359172))), cos((-(floor((atan((mod($in.a.x - 5.0, 10.0) - 5.0), (mod($in.a.y - 5.0, 10.0) - 5.0)) + 0.6283185307179586) / 1.2566370614359172) * 1.2566370614359172)))), (mod($in.a.z, 16.0) - 8.0), 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold0_abs",
+                      "type": "custom",
+                      "x": 120,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - 1.0, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold0_xy",
+                      "type": "custom",
+                      "x": 120,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4($in.a.xy * mat2(cos(($in.b.x * 0.3)), sin(($in.b.x * 0.3)), -sin(($in.b.x * 0.3)), cos(($in.b.x * 0.3))), $in.a.z, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold0_xz",
+                      "type": "custom",
+                      "x": 120,
+                      "y": 340,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).x, $in.a.y, ($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold1_abs",
+                      "type": "custom",
+                      "x": 360,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - 1.0, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold1_xy",
+                      "type": "custom",
+                      "x": 360,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4($in.a.xy * mat2(cos(($in.b.x * 0.3)), sin(($in.b.x * 0.3)), -sin(($in.b.x * 0.3)), cos(($in.b.x * 0.3))), $in.a.z, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold1_xz",
+                      "type": "custom",
+                      "x": 360,
+                      "y": 340,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).x, $in.a.y, ($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold2_abs",
+                      "type": "custom",
+                      "x": 600,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - 1.0, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold2_xy",
+                      "type": "custom",
+                      "x": 600,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4($in.a.xy * mat2(cos(($in.b.x * 0.3)), sin(($in.b.x * 0.3)), -sin(($in.b.x * 0.3)), cos(($in.b.x * 0.3))), $in.a.z, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold2_xz",
+                      "type": "custom",
+                      "x": 600,
+                      "y": 340,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).x, $in.a.y, ($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold3_abs",
+                      "type": "custom",
+                      "x": 840,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - 1.0, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold3_xy",
+                      "type": "custom",
+                      "x": 840,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4($in.a.xy * mat2(cos(($in.b.x * 0.3)), sin(($in.b.x * 0.3)), -sin(($in.b.x * 0.3)), cos(($in.b.x * 0.3))), $in.a.z, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold3_xz",
+                      "type": "custom",
+                      "x": 840,
+                      "y": 340,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).x, $in.a.y, ($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold4_abs",
+                      "type": "custom",
+                      "x": 1080,
+                      "y": 0,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - 1.0, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold4_xy",
+                      "type": "custom",
+                      "x": 1080,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4($in.a.xy * mat2(cos(($in.b.x * 0.3)), sin(($in.b.x * 0.3)), -sin(($in.b.x * 0.3)), cos(($in.b.x * 0.3))), $in.a.z, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "fold4_xz",
+                      "type": "custom",
+                      "x": 1080,
+                      "y": 340,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).x, $in.a.y, ($in.a.xz * mat2(cos(($in.b.x * 0.1)), sin(($in.b.x * 0.1)), -sin(($in.b.x * 0.1)), cos(($in.b.x * 0.1)))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "finalrot",
+                      "type": "custom",
+                      "x": 1400,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4(($in.a.xz * mat2(cos($in.b.x), sin($in.b.x), -sin($in.b.x), cos($in.b.x))).x, $in.a.y, ($in.a.xz * mat2(cos($in.b.x), sin($in.b.x), -sin($in.b.x), cos($in.b.x))).y, 0.0)"
+                      }
+                    },
+                    {
+                      "id": "boxd",
+                      "type": "custom",
+                      "x": 1640,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4(abs($in.a.xyz) - vec3(0.4, 0.8, 0.3), 0.0)"
+                      }
+                    },
+                    {
+                      "id": "box",
+                      "type": "custom",
+                      "x": 1880,
+                      "y": 170,
+                      "params": {
+                        "expr": "vec4(min(max($in.a.x, max($in.a.y, $in.a.z)), 0.0) + length(max($in.a.xyz, 0.0)), 0.0, 0.0, 1.0)"
+                      }
+                    },
+                    {
+                      "id": "go",
+                      "type": "groupOutput",
+                      "x": 2120,
+                      "y": 170,
+                      "params": {
+                        "port": "d",
+                        "type": "float"
+                      }
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "from": {
+                        "node": "gi_pos",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "tile",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "tile",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold0_abs",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold0_abs",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold0_xy",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold0_xy",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold0_xy",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold0_xz",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold0_xz",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold0_xz",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold1_abs",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold1_abs",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold1_xy",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold1_xy",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold1_xy",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold1_xz",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold1_xz",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold1_xz",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold2_abs",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold2_abs",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold2_xy",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold2_xy",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold2_xy",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold2_xz",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold2_xz",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold2_xz",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold3_abs",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold3_abs",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold3_xy",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold3_xy",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold3_xy",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold3_xz",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold3_xz",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold3_xz",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold4_abs",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold4_abs",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold4_xy",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold4_xy",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold4_xy",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold4_xz",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "fold4_xz",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "fold4_xz",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "finalrot",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "gi_t",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "finalrot",
+                        "port": "b"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "finalrot",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "boxd",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "boxd",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "box",
+                        "port": "a"
+                      }
+                    },
+                    {
+                      "from": {
+                        "node": "box",
+                        "port": "out"
+                      },
+                      "to": {
+                        "node": "go",
+                        "port": "color"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "step",
+              "type": "custom",
+              "x": 380,
+              "y": 0,
+              "params": {
+                "expr": "vec4($in.b.x + max(abs($in.a.x), 0.02) * 0.5, max(abs($in.a.x), 0.02), 0.0, 0.0)"
+              }
+            },
+            {
+              "id": "glow",
+              "type": "custom",
+              "x": 620,
+              "y": 0,
+              "params": {
+                "expr": "vec4(exp(-$in.a.y * 3.0), 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "pulse",
+              "type": "custom",
+              "x": 620,
+              "y": 150,
+              "params": {
+                "expr": "vec4(step(mod(length($in.a.xyz) + 24.0 * $in.b.x, 30.0), 3.0), 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "aeff",
+              "type": "custom",
+              "x": 860,
+              "y": 75,
+              "params": {
+                "expr": "vec4($in.a.x * (1.0 + $in.b.x * 1.0), 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "acc_new",
+              "type": "custom",
+              "x": 1100,
+              "y": 0,
+              "params": {
+                "expr": "vec4($in.a.x + $in.b.x, 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "acc2_new",
+              "type": "custom",
+              "x": 1100,
+              "y": 300,
+              "params": {
+                "expr": "vec4($in.a.x + $in.b.x * $in.c, 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "go_dist",
+              "type": "groupOutput",
+              "x": 1340,
+              "y": 0,
+              "params": {
+                "port": "dist",
+                "type": "float"
+              }
+            },
+            {
+              "id": "go_acc",
+              "type": "groupOutput",
+              "x": 1340,
+              "y": 200,
+              "params": {
+                "port": "acc",
+                "type": "vec4"
+              }
+            },
+            {
+              "id": "go_acc2",
+              "type": "groupOutput",
+              "x": 1340,
+              "y": 400,
+              "params": {
+                "port": "acc2",
+                "type": "vec4"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "gi_ray",
+                "port": "out"
+              },
+              "to": {
+                "node": "pos",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_dist",
+                "port": "out"
+              },
+              "to": {
+                "node": "pos",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_t",
+                "port": "out"
+              },
+              "to": {
+                "node": "pos",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "pos",
+                "port": "out"
+              },
+              "to": {
+                "node": "field",
+                "port": "pos"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_t",
+                "port": "out"
+              },
+              "to": {
+                "node": "field",
+                "port": "t"
+              }
+            },
+            {
+              "from": {
+                "node": "field",
+                "port": "d"
+              },
+              "to": {
+                "node": "step",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_dist",
+                "port": "out"
+              },
+              "to": {
+                "node": "step",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "step",
+                "port": "out"
+              },
+              "to": {
+                "node": "glow",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pos",
+                "port": "out"
+              },
+              "to": {
+                "node": "pulse",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_t",
+                "port": "out"
+              },
+              "to": {
+                "node": "pulse",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "glow",
+                "port": "out"
+              },
+              "to": {
+                "node": "aeff",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pulse",
+                "port": "out"
+              },
+              "to": {
+                "node": "aeff",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_acc",
+                "port": "out"
+              },
+              "to": {
+                "node": "acc_new",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "aeff",
+                "port": "out"
+              },
+              "to": {
+                "node": "acc_new",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_acc2",
+                "port": "out"
+              },
+              "to": {
+                "node": "acc2_new",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "aeff",
+                "port": "out"
+              },
+              "to": {
+                "node": "acc2_new",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "pulse",
+                "port": "out"
+              },
+              "to": {
+                "node": "acc2_new",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "step",
+                "port": "out"
+              },
+              "to": {
+                "node": "go_dist",
+                "port": "color"
+              }
+            },
+            {
+              "from": {
+                "node": "acc_new",
+                "port": "out"
+              },
+              "to": {
+                "node": "go_acc",
+                "port": "color"
+              }
+            },
+            {
+              "from": {
+                "node": "acc2_new",
+                "port": "out"
+              },
+              "to": {
+                "node": "go_acc2",
+                "port": "color"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_mv2mo7yy18bye",
+      "type": "custom",
+      "x": 1180,
+      "y": 200,
+      "params": {
+        "expr": "vec4(vec3($in.a.x, $in.a.x * 1.1 + $in.b.x * 0.2, $in.a.x * 1.2 + $in.b.x * 0.5) * 0.01000, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2mo7yy0xkum",
+      "type": "output",
+      "x": 1460,
+      "y": 200,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2mo7yy4tcki",
+      "from": {
+        "node": "n_mv2mo7yy66nsm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy8l0rw",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy8uwo0",
+      "from": {
+        "node": "n_mv2mo7yy8l0rw",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy53tn8",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy902uy",
+      "from": {
+        "node": "n_mv2mo7yy9g7i7",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy53tn8",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy9pd15",
+      "from": {
+        "node": "n_mv2mo7yy53tn8",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "ray"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy3850w",
+      "from": {
+        "node": "n_mv2mo7yy9g7i7",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "t"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy8lbtc",
+      "from": {
+        "node": "n_mv2mo7yy21tak",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "dist"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy832yd",
+      "from": {
+        "node": "n_mv2mo7yy5tkkx",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "acc"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy46fzm",
+      "from": {
+        "node": "n_mv2mo7yy0y235",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "acc2"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy92npl",
+      "from": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "acc"
+      },
+      "to": {
+        "node": "n_mv2mo7yy18bye",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy0pomn",
+      "from": {
+        "node": "n_mv2mo7yy0w0th",
+        "port": "acc2"
+      },
+      "to": {
+        "node": "n_mv2mo7yy18bye",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2mo7yy89yev",
+      "from": {
+        "node": "n_mv2mo7yy18bye",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2mo7yy0xkum",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2mo7yy66nsm",
+        "n_mv2mo7yy9g7i7",
+        "n_mv2mo7yy8l0rw",
+        "n_mv2mo7yy53tn8",
+        "n_mv2mo7yy21tak",
+        "n_mv2mo7yy5tkkx",
+        "n_mv2mo7yy0y235",
+        "n_mv2mo7yy0w0th",
+        "n_mv2mo7yy18bye",
+        "n_mv2mo7yy0xkum"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

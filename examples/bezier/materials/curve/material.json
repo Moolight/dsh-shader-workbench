@@ -1,0 +1,53 @@
+{
+  "id": "mat_mv2kvuo73689x",
+  "name": "贝塞尔曲线：32 段采样求最小距离",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "curve.frag"
+  },
+  "uniforms": {
+    "uP0": {
+      "name": "uP0",
+      "type": "vec2",
+      "value": [
+        -0.62,
+        -0.42
+      ],
+      "label": "P0"
+    },
+    "uP1": {
+      "name": "uP1",
+      "type": "vec2",
+      "value": [
+        -0.2,
+        0.72
+      ],
+      "label": "P1"
+    },
+    "uP2": {
+      "name": "uP2",
+      "type": "vec2",
+      "value": [
+        0.3,
+        -0.78
+      ],
+      "label": "P2"
+    },
+    "uP3": {
+      "name": "uP3",
+      "type": "vec2",
+      "value": [
+        0.66,
+        0.36
+      ],
+      "label": "P3"
+    }
+  },
+  "textures": [],
+  "passes": [
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:51:35.862Z"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "mat_mv2jr5ve821l5",
+  "name": "频谱：每根柱是一次谐波",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "harmonics.frag"
+  },
+  "uniforms": {},
+  "textures": [],
+  "passes": [
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:26:03.372Z"
+}

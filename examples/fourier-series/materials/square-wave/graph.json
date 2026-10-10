@@ -1,0 +1,282 @@
+{
+  "id": "g_mv2lw2pg8q33a",
+  "name": "方波 = 正弦叠加（展开成节点）",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2lw2pg6lxoy",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2lw2pg3q1rp",
+      "type": "custom",
+      "x": 0,
+      "y": 200,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg9t853",
+      "type": "custom",
+      "x": 300,
+      "y": 0,
+      "params": {
+        "expr": "vec4($in.b.x + 1.273240 * sin(6.283185307179586 * 1.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg3rpe5",
+      "type": "custom",
+      "x": 326,
+      "y": 100,
+      "params": {
+        "expr": "vec4($in.b.x + 0.424413 * sin(6.283185307179586 * 3.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg3dnbt",
+      "type": "custom",
+      "x": 352,
+      "y": 200,
+      "params": {
+        "expr": "vec4($in.b.x + 0.254648 * sin(6.283185307179586 * 5.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg16oom",
+      "type": "custom",
+      "x": 378,
+      "y": 300,
+      "params": {
+        "expr": "vec4($in.b.x + 0.181891 * sin(6.283185307179586 * 7.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg5fqxc",
+      "type": "custom",
+      "x": 404,
+      "y": 400,
+      "params": {
+        "expr": "vec4($in.b.x + 0.141471 * sin(6.283185307179586 * 9.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg6b8c5",
+      "type": "custom",
+      "x": 430,
+      "y": 500,
+      "params": {
+        "expr": "vec4($in.b.x + 0.115749 * sin(6.283185307179586 * 11.0 * $in.a.x * 2.0), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg72mq6",
+      "type": "custom",
+      "x": 900,
+      "y": 0,
+      "params": {
+        "expr": "vec4(mix(\nmix(vec3(0.03, 0.04, 0.06), vec3(0.34, 0.38, 0.46),\nsmoothstep(0.010, 0.0, abs(($in.a.y * 2.0 - 1.0) - (fract($in.a.x * 2.0) < 0.5 ? 1.0 : -1.0)))\n * (fract($in.a.x * 90.0) < 0.55 ? 1.0 : 0.12)),\nvec3(0.25, 0.95, 1.0),\nsmoothstep(0.008, 0.0, abs(($in.a.y * 2.0 - 1.0) - $in.b.x * 0.80))\n), 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2pg3y1e2",
+      "type": "output",
+      "x": 1500,
+      "y": 0,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2lw2pg52pqa",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg9t853",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg2jr3h",
+      "from": {
+        "node": "n_mv2lw2pg3q1rp",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg9t853",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg8rj8b",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg3rpe5",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg5cogj",
+      "from": {
+        "node": "n_mv2lw2pg9t853",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg3rpe5",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg5kial",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg3dnbt",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg42g7k",
+      "from": {
+        "node": "n_mv2lw2pg3rpe5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg3dnbt",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg6jnm1",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg16oom",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg4w5x2",
+      "from": {
+        "node": "n_mv2lw2pg3dnbt",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg16oom",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg1odrv",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg5fqxc",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg1op6o",
+      "from": {
+        "node": "n_mv2lw2pg16oom",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg5fqxc",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg2wv8a",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg6b8c5",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg6viki",
+      "from": {
+        "node": "n_mv2lw2pg5fqxc",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg6b8c5",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg29yv5",
+      "from": {
+        "node": "n_mv2lw2pg6lxoy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg72mq6",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg02jv9",
+      "from": {
+        "node": "n_mv2lw2pg6b8c5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg72mq6",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2pg2kzt4",
+      "from": {
+        "node": "n_mv2lw2pg72mq6",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2pg3y1e2",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2lw2pg6lxoy",
+        "n_mv2lw2pg3q1rp",
+        "n_mv2lw2pg9t853",
+        "n_mv2lw2pg3rpe5",
+        "n_mv2lw2pg3dnbt",
+        "n_mv2lw2pg16oom",
+        "n_mv2lw2pg5fqxc",
+        "n_mv2lw2pg6b8c5",
+        "n_mv2lw2pg72mq6",
+        "n_mv2lw2pg3y1e2"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

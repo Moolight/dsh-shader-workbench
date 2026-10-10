@@ -1,0 +1,10 @@
+{
+  "name": "fourier-series",
+  "title": "fourier-series",
+  "description": "",
+  "createdAt": "2026-10-10T15:26:14.858Z",
+  "updatedAt": "2026-10-10T16:26:03.335Z",
+  "materials": [
+    "square-wave"
+  ]
+}

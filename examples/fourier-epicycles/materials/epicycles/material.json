@@ -1,0 +1,16 @@
+{
+  "id": "mat_mv2jr5w279wag",
+  "name": "DFT 逆变换：本轮画出一条曲线",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "epicycles.frag"
+  },
+  "uniforms": {},
+  "textures": [],
+  "passes": [
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:26:03.406Z"
+}

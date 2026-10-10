@@ -1,0 +1,70 @@
+{
+  "name": "dsh-shader-workbench",
+  "version": "0.1.0",
+  "description": "DSH Shader Workbench — 节点式 GLSL 搭建、Shadertoy 兼容实时预览、热重载与本地材质资源管理。",
+  "license": "MIT",
+  "author": "Moolight",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Moolight/dsh-shader-workbench.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Moolight/dsh-shader-workbench/issues"
+  },
+  "homepage": "https://github.com/Moolight/dsh-shader-workbench#readme",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "shader",
+    "glsl",
+    "shadertoy",
+    "webgl2",
+    "node-editor"
+  ],
+  "type": "module",
+  "main": "host/index.js",
+  "files": [
+    "host/**/*.js",
+    "client/**/*.js",
+    "shared/**/*.js",
+    "examples/**",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "test:sandbox": "node scripts/run-tests.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./host/index.js",
+    "./client": "./client/index.js",
+    "./runtime": "./client/runtime/index.js",
+    "./shared": "./shared/index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {}
+}

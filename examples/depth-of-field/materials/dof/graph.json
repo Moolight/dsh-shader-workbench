@@ -1,0 +1,1024 @@
+{
+  "id": "g_mv2msx5z9j877",
+  "name": "Depth of field (CoC driven blur)",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2msx5z5n6ue",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2msx5z1kcfa",
+      "type": "custom",
+      "x": 260,
+      "y": 0,
+      "params": {
+        "expr": "vec4(mix(mix(mix(mix(mix((($in.a.xy.y > 0.4) ? (mix(vec3(0.20, 0.24, 0.36), vec3(0.56, 0.64, 0.80), smoothstep(0.4, 0.90, $in.a.xy.y))) : (mix(vec3(0.09, 0.10, 0.14), vec3(0.40, 0.42, 0.46), smoothstep(0.4, 1.0, $in.a.xy.y)))), vec3(0.92, 0.35, 0.32), (step(abs($in.a.xy.x - 0.1923), 0.1538) * step(0.0923, $in.a.xy.y) * step($in.a.xy.y, 0.6308))), vec3(0.95, 0.72, 0.28), (step(abs($in.a.xy.x - 0.8500), 0.1125) * step(0.1000, $in.a.xy.y) * step($in.a.xy.y, 0.5500))), vec3(0.30, 0.85, 0.90), (step(abs($in.a.xy.x - 0.4375), 0.0547) * step(0.3063, $in.a.xy.y) * step($in.a.xy.y, 0.4938))), vec3(0.62, 0.45, 0.90), (step(abs($in.a.xy.x - 0.7396), 0.0417) * step(0.2542, $in.a.xy.y) * step($in.a.xy.y, 0.4625))), vec3(0.42, 0.55, 0.78), (step(abs($in.a.xy.x - 0.3400), 0.0333) * step(0.2800, $in.a.xy.y) * step($in.a.xy.y, 0.4400))), (mix(mix(mix(mix(mix((($in.a.xy.y > 0.4) ? 12.0 : (min(0.3 / max($in.a.xy.y - 0.4, 0.02), 12.0))), 1.300, (step(abs($in.a.xy.x - 0.1923), 0.1538) * step(0.0923, $in.a.xy.y) * step($in.a.xy.y, 0.6308))), 2.000, (step(abs($in.a.xy.x - 0.8500), 0.1125) * step(0.1000, $in.a.xy.y) * step($in.a.xy.y, 0.5500))), 3.200, (step(abs($in.a.xy.x - 0.4375), 0.0547) * step(0.3063, $in.a.xy.y) * step($in.a.xy.y, 0.4938))), 4.800, (step(abs($in.a.xy.x - 0.7396), 0.0417) * step(0.2542, $in.a.xy.y) * step($in.a.xy.y, 0.4625))), 7.500, (step(abs($in.a.xy.x - 0.3400), 0.0333) * step(0.2800, $in.a.xy.y) * step($in.a.xy.y, 0.4400)))) / 12.0)"
+      }
+    },
+    {
+      "id": "n_mv2msx5z6z6s9",
+      "type": "output",
+      "x": 560,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2msx5z5w27j",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2msx5z4eugm",
+      "type": "uniform",
+      "x": 0,
+      "y": 160,
+      "params": {
+        "name": "uFocus",
+        "outType": "float"
+      }
+    },
+    {
+      "id": "n_mv2msx5z5h3iy",
+      "type": "uniform",
+      "x": 0,
+      "y": 280,
+      "params": {
+        "name": "uAperture",
+        "outType": "float"
+      }
+    },
+    {
+      "id": "n_mv2msx5z1s567",
+      "type": "bufferSample",
+      "x": 220,
+      "y": 300,
+      "params": {
+        "buffer": "BufferA"
+      }
+    },
+    {
+      "id": "n_mv2msx5z9vz9t",
+      "type": "custom",
+      "x": 480,
+      "y": 180,
+      "params": {
+        "expr": "vec4(clamp(\nabs($in.a.w * 12.0 - $in.c) * 0.010 * $in.b.x,\n0.0, 0.06\n))"
+      }
+    },
+    {
+      "id": "n_mv2msx5z9bzxf",
+      "type": "group",
+      "x": 760,
+      "y": 60,
+      "params": {
+        "graph": {
+          "name": "高斯模糊 9 抽样（源 BufferA）",
+          "inputs": [
+            {
+              "id": "uv",
+              "label": "uv",
+              "type": "vec2"
+            },
+            {
+              "id": "radius",
+              "label": "半径",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out",
+              "label": "color",
+              "type": "vec4"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "gi_uv",
+              "type": "groupInput",
+              "x": -460,
+              "y": 0,
+              "params": {
+                "port": "uv",
+                "type": "vec2"
+              }
+            },
+            {
+              "id": "gi_r",
+              "type": "groupInput",
+              "x": -460,
+              "y": 150,
+              "params": {
+                "port": "radius",
+                "type": "float"
+              }
+            },
+            {
+              "id": "seed",
+              "type": "custom",
+              "x": -460,
+              "y": 300,
+              "params": {
+                "expr": "vec4(0.0)"
+              }
+            },
+            {
+              "id": "off0",
+              "type": "custom",
+              "x": -180,
+              "y": 0,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(-1.0, -1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp0",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 0,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum0",
+              "type": "custom",
+              "x": 340,
+              "y": 0,
+              "params": {
+                "expr": "$in.b + $in.a * 0.0750"
+              }
+            },
+            {
+              "id": "off1",
+              "type": "custom",
+              "x": -180,
+              "y": 96,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(0.0, -1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp1",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 96,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum1",
+              "type": "custom",
+              "x": 340,
+              "y": 96,
+              "params": {
+                "expr": "$in.b + $in.a * 0.1240"
+              }
+            },
+            {
+              "id": "off2",
+              "type": "custom",
+              "x": -180,
+              "y": 192,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(1.0, -1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp2",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 192,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum2",
+              "type": "custom",
+              "x": 340,
+              "y": 192,
+              "params": {
+                "expr": "$in.b + $in.a * 0.0750"
+              }
+            },
+            {
+              "id": "off3",
+              "type": "custom",
+              "x": -180,
+              "y": 288,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(-1.0, 0.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp3",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 288,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum3",
+              "type": "custom",
+              "x": 340,
+              "y": 288,
+              "params": {
+                "expr": "$in.b + $in.a * 0.1240"
+              }
+            },
+            {
+              "id": "off4",
+              "type": "custom",
+              "x": -180,
+              "y": 384,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(0.0, 0.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp4",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 384,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum4",
+              "type": "custom",
+              "x": 340,
+              "y": 384,
+              "params": {
+                "expr": "$in.b + $in.a * 0.2040"
+              }
+            },
+            {
+              "id": "off5",
+              "type": "custom",
+              "x": -180,
+              "y": 480,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(1.0, 0.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp5",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 480,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum5",
+              "type": "custom",
+              "x": 340,
+              "y": 480,
+              "params": {
+                "expr": "$in.b + $in.a * 0.1240"
+              }
+            },
+            {
+              "id": "off6",
+              "type": "custom",
+              "x": -180,
+              "y": 576,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(-1.0, 1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp6",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 576,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum6",
+              "type": "custom",
+              "x": 340,
+              "y": 576,
+              "params": {
+                "expr": "$in.b + $in.a * 0.0750"
+              }
+            },
+            {
+              "id": "off7",
+              "type": "custom",
+              "x": -180,
+              "y": 672,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(0.0, 1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp7",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 672,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum7",
+              "type": "custom",
+              "x": 340,
+              "y": 672,
+              "params": {
+                "expr": "$in.b + $in.a * 0.1240"
+              }
+            },
+            {
+              "id": "off8",
+              "type": "custom",
+              "x": -180,
+              "y": 768,
+              "params": {
+                "expr": "vec4($in.a.xy + vec2(1.0, 1.0) * $in.c, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "samp8",
+              "type": "bufferSample",
+              "x": 80,
+              "y": 768,
+              "params": {
+                "buffer": "BufferA"
+              }
+            },
+            {
+              "id": "sum8",
+              "type": "custom",
+              "x": 340,
+              "y": 768,
+              "params": {
+                "expr": "$in.b + $in.a * 0.0750"
+              }
+            },
+            {
+              "id": "go",
+              "type": "groupOutput",
+              "x": 600,
+              "y": 0,
+              "params": {
+                "port": "out",
+                "type": "vec4"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off0",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off0",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off0",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp0",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp0",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum0",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "seed",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum0",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off1",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off1",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off1",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp1",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp1",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum1",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum0",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum1",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off2",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off2",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off2",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp2",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp2",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum2",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum1",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum2",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off3",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off3",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off3",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp3",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp3",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum3",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum2",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum3",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off4",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off4",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off4",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp4",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp4",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum4",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum3",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum4",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off5",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off5",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off5",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp5",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp5",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum5",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum4",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum5",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off6",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off6",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off6",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp6",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp6",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum6",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum5",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum6",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off7",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off7",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off7",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp7",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp7",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum7",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum6",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum7",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_uv",
+                "port": "out"
+              },
+              "to": {
+                "node": "off8",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_r",
+                "port": "out"
+              },
+              "to": {
+                "node": "off8",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "off8",
+                "port": "out"
+              },
+              "to": {
+                "node": "samp8",
+                "port": "uv"
+              }
+            },
+            {
+              "from": {
+                "node": "samp8",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum8",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "sum7",
+                "port": "out"
+              },
+              "to": {
+                "node": "sum8",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "sum8",
+                "port": "out"
+              },
+              "to": {
+                "node": "go",
+                "port": "color"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_mv2msx5z9hgfs",
+      "type": "custom",
+      "x": 1120,
+      "y": 60,
+      "params": {
+        "expr": "vec4(pow($in.a.rgb, vec3(0.4545)), 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2msx5z74ngu",
+      "type": "output",
+      "x": 1380,
+      "y": 60,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2msx5z6f3nx",
+      "from": {
+        "node": "n_mv2msx5z5n6ue",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z1kcfa",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx5z47ii6",
+      "from": {
+        "node": "n_mv2msx5z1kcfa",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z6z6s9",
+        "port": "color"
+      }
+    },
+    {
+      "id": "e_mv2msx5z7pib7",
+      "from": {
+        "node": "n_mv2msx5z5w27j",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z1s567",
+        "port": "uv"
+      }
+    },
+    {
+      "id": "e_mv2msx5z2eizc",
+      "from": {
+        "node": "n_mv2msx5z5w27j",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9bzxf",
+        "port": "uv"
+      }
+    },
+    {
+      "id": "e_mv2msx5z16caz",
+      "from": {
+        "node": "n_mv2msx5z1s567",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9vz9t",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx5z2zil4",
+      "from": {
+        "node": "n_mv2msx5z5h3iy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9vz9t",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2msx5z78u5x",
+      "from": {
+        "node": "n_mv2msx5z4eugm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9vz9t",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2msx5z22pgb",
+      "from": {
+        "node": "n_mv2msx5z9vz9t",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9bzxf",
+        "port": "radius"
+      }
+    },
+    {
+      "id": "e_mv2msx5z3u5dx",
+      "from": {
+        "node": "n_mv2msx5z9bzxf",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z9hgfs",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx5z7k8cy",
+      "from": {
+        "node": "n_mv2msx5z9hgfs",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx5z74ngu",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [
+    {
+      "name": "uFocus",
+      "type": "float",
+      "value": 3,
+      "min": 0,
+      "max": 12,
+      "label": "对焦距离"
+    },
+    {
+      "name": "uAperture",
+      "type": "float",
+      "value": 1,
+      "min": 0,
+      "max": 3,
+      "label": "光圈"
+    }
+  ],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2msx5z5w27j",
+        "n_mv2msx5z4eugm",
+        "n_mv2msx5z5h3iy",
+        "n_mv2msx5z1s567",
+        "n_mv2msx5z9vz9t",
+        "n_mv2msx5z9bzxf",
+        "n_mv2msx5z9hgfs",
+        "n_mv2msx5z74ngu"
+      ]
+    },
+    {
+      "name": "BufferA",
+      "graph": [
+        "n_mv2msx5z5n6ue",
+        "n_mv2msx5z1kcfa",
+        "n_mv2msx5z6z6s9"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

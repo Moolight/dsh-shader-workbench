@@ -1,0 +1,10 @@
+{
+  "name": "fourier-spectrum",
+  "title": "fourier-spectrum",
+  "description": "",
+  "createdAt": "2026-10-10T15:26:14.897Z",
+  "updatedAt": "2026-10-10T16:26:03.369Z",
+  "materials": [
+    "harmonics"
+  ]
+}

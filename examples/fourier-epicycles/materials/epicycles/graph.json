@@ -1,0 +1,1520 @@
+{
+  "id": "g_mv2lw2rg6nohj",
+  "name": "本轮画心形（8 个旋转向量 + BufferA 轨迹）",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2lw2rf23vog",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2lw2rf75iby",
+      "type": "time",
+      "x": 0,
+      "y": 190,
+      "params": {
+        "scale": 0.12
+      }
+    },
+    {
+      "id": "n_mv2lw2rf842wr",
+      "type": "custom",
+      "x": 0,
+      "y": 340,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rf20uc8",
+      "type": "custom",
+      "x": 440,
+      "y": 0,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.455882 * vec2(cos(6.283185307179586 * -1.0 * $in.b.x + 1.570796), sin(6.283185307179586 * -1.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5vui2",
+      "type": "custom",
+      "x": 462,
+      "y": 116,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.109412 * vec2(cos(6.283185307179586 * -3.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -3.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5jfa1",
+      "type": "custom",
+      "x": 484,
+      "y": 232,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.091177 * vec2(cos(6.283185307179586 * 2.0 * $in.b.x + -1.570796), sin(6.283185307179586 * 2.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg3x3bq",
+      "type": "custom",
+      "x": 506,
+      "y": 348,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.091177 * vec2(cos(6.283185307179586 * -2.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -2.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg2p5w9",
+      "type": "custom",
+      "x": 528,
+      "y": 464,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.036471 * vec2(cos(6.283185307179586 * 3.0 * $in.b.x + 1.570796), sin(6.283185307179586 * 3.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg9kjz0",
+      "type": "custom",
+      "x": 550,
+      "y": 580,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * -4.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -4.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg0zsk5",
+      "type": "custom",
+      "x": 572,
+      "y": 696,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * 1.0 * $in.b.x + 1.570796), sin(6.283185307179586 * 1.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg1qfl3",
+      "type": "custom",
+      "x": 594,
+      "y": 812,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * 4.0 * $in.b.x + -1.570796), sin(6.283185307179586 * 4.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg9tc2q",
+      "type": "custom",
+      "x": 1000,
+      "y": 0,
+      "params": {
+        "expr": "vec4(smoothstep(0.010, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg6lhk6",
+      "type": "bufferSample",
+      "x": 1000,
+      "y": 260,
+      "params": {
+        "buffer": "BufferA"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5fr57",
+      "type": "custom",
+      "x": 1260,
+      "y": 130,
+      "params": {
+        "expr": "vec4(max($in.a.x * 0.9965, $in.b.x), 0.0, 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5apvo",
+      "type": "output",
+      "x": 1520,
+      "y": 130,
+      "params": {}
+    },
+    {
+      "id": "n_mv2lw2rg83arm",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2lw2rg74yc3",
+      "type": "time",
+      "x": 0,
+      "y": 200,
+      "params": {
+        "scale": 0.12
+      }
+    },
+    {
+      "id": "n_mv2lw2rg2f8h4",
+      "type": "custom",
+      "x": 0,
+      "y": 360,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg846fx",
+      "type": "custom",
+      "x": 220,
+      "y": 360,
+      "params": {
+        "expr": "vec4(9.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg7fjkl",
+      "type": "custom",
+      "x": 220,
+      "y": 500,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg2d1bm",
+      "type": "custom",
+      "x": 440,
+      "y": 0,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.455882 * vec2(cos(6.283185307179586 * -1.0 * $in.b.x + 1.570796), sin(6.283185307179586 * -1.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg754d7",
+      "type": "custom",
+      "x": 860,
+      "y": 40,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.455882)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg6j04b",
+      "type": "custom",
+      "x": 860,
+      "y": 620,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg67mqq",
+      "type": "custom",
+      "x": 462,
+      "y": 116,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.109412 * vec2(cos(6.283185307179586 * -3.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -3.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg0886s",
+      "type": "custom",
+      "x": 878,
+      "y": 132,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.109412)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg6zg0b",
+      "type": "custom",
+      "x": 878,
+      "y": 666,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg36nb5",
+      "type": "custom",
+      "x": 484,
+      "y": 232,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.091177 * vec2(cos(6.283185307179586 * 2.0 * $in.b.x + -1.570796), sin(6.283185307179586 * 2.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg2b209",
+      "type": "custom",
+      "x": 896,
+      "y": 224,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.091177)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg0hk58",
+      "type": "custom",
+      "x": 896,
+      "y": 712,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg4c2qe",
+      "type": "custom",
+      "x": 506,
+      "y": 348,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.091177 * vec2(cos(6.283185307179586 * -2.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -2.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg269aq",
+      "type": "custom",
+      "x": 914,
+      "y": 316,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.091177)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg8u98a",
+      "type": "custom",
+      "x": 914,
+      "y": 758,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg18ber",
+      "type": "custom",
+      "x": 528,
+      "y": 464,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.036471 * vec2(cos(6.283185307179586 * 3.0 * $in.b.x + 1.570796), sin(6.283185307179586 * 3.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg1p4uv",
+      "type": "custom",
+      "x": 932,
+      "y": 408,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.036471)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg08s2w",
+      "type": "custom",
+      "x": 932,
+      "y": 804,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg6sbrk",
+      "type": "custom",
+      "x": 550,
+      "y": 580,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * -4.0 * $in.b.x + -1.570796), sin(6.283185307179586 * -4.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg1ya85",
+      "type": "custom",
+      "x": 950,
+      "y": 500,
+      "params": {
+        "expr": "vec4(min($in.c, abs(length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy) - 0.018235)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg50rwx",
+      "type": "custom",
+      "x": 950,
+      "y": 850,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5b96f",
+      "type": "custom",
+      "x": 572,
+      "y": 696,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * 1.0 * $in.b.x + 1.570796), sin(6.283185307179586 * 1.0 * $in.b.x + 1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg9di73",
+      "type": "custom",
+      "x": 968,
+      "y": 896,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg3maib",
+      "type": "custom",
+      "x": 594,
+      "y": 812,
+      "params": {
+        "expr": "vec4($in.a.xy + 0.018235 * vec2(cos(6.283185307179586 * 4.0 * $in.b.x + -1.570796), sin(6.283185307179586 * 4.0 * $in.b.x + -1.570796)), 0.0, 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg5vvl9",
+      "type": "custom",
+      "x": 986,
+      "y": 942,
+      "params": {
+        "expr": "vec4(max($in.c, smoothstep(0.016, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.xy))))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg9kslt",
+      "type": "custom",
+      "x": 1180,
+      "y": 360,
+      "params": {
+        "expr": "vec4(smoothstep(0.0045, 0.0, $in.a.x))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg1t0pc",
+      "type": "custom",
+      "x": 1360,
+      "y": 360,
+      "params": {
+        "expr": "vec4(max($in.a.x, $in.b.x))"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg2nz7c",
+      "type": "custom",
+      "x": 1300,
+      "y": 360,
+      "params": {
+        "expr": "vec4($in.a.x, $in.b.xy, 0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg17ipy",
+      "type": "bufferSample",
+      "x": 1540,
+      "y": 560,
+      "params": {
+        "buffer": "BufferA"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg92dla",
+      "type": "custom",
+      "x": 1780,
+      "y": 440,
+      "params": {
+        "expr": "vec4(max($in.a.x, $in.b.x * 0.90), $in.a.yz, 0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg4m5vo",
+      "type": "custom",
+      "x": 2020,
+      "y": 440,
+      "params": {
+        "expr": "vec4(mix(\nmix(vec3(0.02, 0.025, 0.04), vec3(0.95, 0.78, 0.35), $in.b.x * 0.62),\nvec3(1.00, 0.88, 0.45), smoothstep(0.030, 0.0, length((($in.a.xy * 2.0 - 1.0) * vec2(iResolution.x / iResolution.y, 1.0)) - $in.b.yz))\n), 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2rg3c6xn",
+      "type": "output",
+      "x": 2280,
+      "y": 440,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2lw2rg4zbz2",
+      "from": {
+        "node": "n_mv2lw2rf23vog",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rf842wr",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg967pa",
+      "from": {
+        "node": "n_mv2lw2rf842wr",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rf20uc8",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0v4mk",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rf20uc8",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2njhj",
+      "from": {
+        "node": "n_mv2lw2rf20uc8",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5vui2",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg11oxq",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5vui2",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg04alo",
+      "from": {
+        "node": "n_mv2lw2rg5vui2",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5jfa1",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg73wl8",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5jfa1",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1enw2",
+      "from": {
+        "node": "n_mv2lw2rg5jfa1",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg3x3bq",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5j9uv",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg3x3bq",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2mbx7",
+      "from": {
+        "node": "n_mv2lw2rg3x3bq",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2p5w9",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3zzn8",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2p5w9",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg4lavw",
+      "from": {
+        "node": "n_mv2lw2rg2p5w9",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9kjz0",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0m4qc",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9kjz0",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0m7z8",
+      "from": {
+        "node": "n_mv2lw2rg9kjz0",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0zsk5",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg541tq",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0zsk5",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg27glp",
+      "from": {
+        "node": "n_mv2lw2rg0zsk5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1qfl3",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2w137",
+      "from": {
+        "node": "n_mv2lw2rf75iby",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1qfl3",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1f55a",
+      "from": {
+        "node": "n_mv2lw2rf23vog",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9tc2q",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6k0fe",
+      "from": {
+        "node": "n_mv2lw2rg1qfl3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9tc2q",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3b68x",
+      "from": {
+        "node": "n_mv2lw2rf23vog",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6lhk6",
+        "port": "uv"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg32o63",
+      "from": {
+        "node": "n_mv2lw2rg6lhk6",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5fr57",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg14eb6",
+      "from": {
+        "node": "n_mv2lw2rg9tc2q",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5fr57",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5aol1",
+      "from": {
+        "node": "n_mv2lw2rg5fr57",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5apvo",
+        "port": "color"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg99bs9",
+      "from": {
+        "node": "n_mv2lw2rg2f8h4",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2d1bm",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2mrec",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2d1bm",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1fan0",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg754d7",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg7mjsc",
+      "from": {
+        "node": "n_mv2lw2rg2f8h4",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg754d7",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg7opsf",
+      "from": {
+        "node": "n_mv2lw2rg846fx",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg754d7",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg16zti",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6j04b",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6go56",
+      "from": {
+        "node": "n_mv2lw2rg2d1bm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6j04b",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg4e2j5",
+      "from": {
+        "node": "n_mv2lw2rg7fjkl",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6j04b",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg80v5t",
+      "from": {
+        "node": "n_mv2lw2rg2d1bm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg67mqq",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9xbv9",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg67mqq",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6u71g",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0886s",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg58n65",
+      "from": {
+        "node": "n_mv2lw2rg2d1bm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0886s",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg7tume",
+      "from": {
+        "node": "n_mv2lw2rg754d7",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0886s",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg30ezl",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6zg0b",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1v00b",
+      "from": {
+        "node": "n_mv2lw2rg67mqq",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6zg0b",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6n0km",
+      "from": {
+        "node": "n_mv2lw2rg6j04b",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6zg0b",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3nna9",
+      "from": {
+        "node": "n_mv2lw2rg67mqq",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg36nb5",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg8dusl",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg36nb5",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9gfc7",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2b209",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1hx1n",
+      "from": {
+        "node": "n_mv2lw2rg67mqq",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2b209",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0476l",
+      "from": {
+        "node": "n_mv2lw2rg0886s",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2b209",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1r2q9",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0hk58",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg46vra",
+      "from": {
+        "node": "n_mv2lw2rg36nb5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0hk58",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6lf6p",
+      "from": {
+        "node": "n_mv2lw2rg6zg0b",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg0hk58",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg8hmjb",
+      "from": {
+        "node": "n_mv2lw2rg36nb5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg4c2qe",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9xy7a",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg4c2qe",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg99t2s",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg269aq",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3pors",
+      "from": {
+        "node": "n_mv2lw2rg36nb5",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg269aq",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5pyzv",
+      "from": {
+        "node": "n_mv2lw2rg2b209",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg269aq",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6w9dm",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg8u98a",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg154n2",
+      "from": {
+        "node": "n_mv2lw2rg4c2qe",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg8u98a",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2hc9m",
+      "from": {
+        "node": "n_mv2lw2rg0hk58",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg8u98a",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg7f7gg",
+      "from": {
+        "node": "n_mv2lw2rg4c2qe",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg18ber",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5vjil",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg18ber",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9autu",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1p4uv",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0ht86",
+      "from": {
+        "node": "n_mv2lw2rg4c2qe",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1p4uv",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3rxzg",
+      "from": {
+        "node": "n_mv2lw2rg269aq",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1p4uv",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3cop6",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg08s2w",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg70066",
+      "from": {
+        "node": "n_mv2lw2rg18ber",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg08s2w",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg10nq5",
+      "from": {
+        "node": "n_mv2lw2rg8u98a",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg08s2w",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3aqan",
+      "from": {
+        "node": "n_mv2lw2rg18ber",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6sbrk",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg23oeq",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg6sbrk",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9r61w",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1ya85",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg8mipb",
+      "from": {
+        "node": "n_mv2lw2rg18ber",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1ya85",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg6rjgy",
+      "from": {
+        "node": "n_mv2lw2rg1p4uv",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1ya85",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2s4lo",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg50rwx",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5x6wu",
+      "from": {
+        "node": "n_mv2lw2rg6sbrk",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg50rwx",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2x0pu",
+      "from": {
+        "node": "n_mv2lw2rg08s2w",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg50rwx",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0arp1",
+      "from": {
+        "node": "n_mv2lw2rg6sbrk",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5b96f",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg0eevo",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5b96f",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2g5ws",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9di73",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg814gp",
+      "from": {
+        "node": "n_mv2lw2rg5b96f",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9di73",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg512uk",
+      "from": {
+        "node": "n_mv2lw2rg50rwx",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9di73",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg8sdw6",
+      "from": {
+        "node": "n_mv2lw2rg5b96f",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg3maib",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg062fy",
+      "from": {
+        "node": "n_mv2lw2rg74yc3",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg3maib",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg7dmaf",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5vvl9",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg31xo3",
+      "from": {
+        "node": "n_mv2lw2rg3maib",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5vvl9",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9oded",
+      "from": {
+        "node": "n_mv2lw2rg9di73",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg5vvl9",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg5wab3",
+      "from": {
+        "node": "n_mv2lw2rg1ya85",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg9kslt",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg76khw",
+      "from": {
+        "node": "n_mv2lw2rg9kslt",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1t0pc",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1v86d",
+      "from": {
+        "node": "n_mv2lw2rg5vvl9",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg1t0pc",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg8f59n",
+      "from": {
+        "node": "n_mv2lw2rg1t0pc",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2nz7c",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg9iawv",
+      "from": {
+        "node": "n_mv2lw2rg3maib",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg2nz7c",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg2xbaj",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg17ipy",
+        "port": "uv"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1cj51",
+      "from": {
+        "node": "n_mv2lw2rg2nz7c",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg92dla",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg67uzh",
+      "from": {
+        "node": "n_mv2lw2rg17ipy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg92dla",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg21h50",
+      "from": {
+        "node": "n_mv2lw2rg83arm",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg4m5vo",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg3vxmf",
+      "from": {
+        "node": "n_mv2lw2rg92dla",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg4m5vo",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2rg1ftdu",
+      "from": {
+        "node": "n_mv2lw2rg4m5vo",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2rg3c6xn",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2lw2rg83arm",
+        "n_mv2lw2rg74yc3",
+        "n_mv2lw2rg2f8h4",
+        "n_mv2lw2rg846fx",
+        "n_mv2lw2rg7fjkl",
+        "n_mv2lw2rg2d1bm",
+        "n_mv2lw2rg754d7",
+        "n_mv2lw2rg6j04b",
+        "n_mv2lw2rg67mqq",
+        "n_mv2lw2rg0886s",
+        "n_mv2lw2rg6zg0b",
+        "n_mv2lw2rg36nb5",
+        "n_mv2lw2rg2b209",
+        "n_mv2lw2rg0hk58",
+        "n_mv2lw2rg4c2qe",
+        "n_mv2lw2rg269aq",
+        "n_mv2lw2rg8u98a",
+        "n_mv2lw2rg18ber",
+        "n_mv2lw2rg1p4uv",
+        "n_mv2lw2rg08s2w",
+        "n_mv2lw2rg6sbrk",
+        "n_mv2lw2rg1ya85",
+        "n_mv2lw2rg50rwx",
+        "n_mv2lw2rg5b96f",
+        "n_mv2lw2rg9di73",
+        "n_mv2lw2rg3maib",
+        "n_mv2lw2rg5vvl9",
+        "n_mv2lw2rg9kslt",
+        "n_mv2lw2rg1t0pc",
+        "n_mv2lw2rg2nz7c",
+        "n_mv2lw2rg17ipy",
+        "n_mv2lw2rg92dla",
+        "n_mv2lw2rg4m5vo",
+        "n_mv2lw2rg3c6xn"
+      ]
+    },
+    {
+      "name": "BufferA",
+      "graph": [
+        "n_mv2lw2rf23vog",
+        "n_mv2lw2rf75iby",
+        "n_mv2lw2rf842wr",
+        "n_mv2lw2rf20uc8",
+        "n_mv2lw2rg5vui2",
+        "n_mv2lw2rg5jfa1",
+        "n_mv2lw2rg3x3bq",
+        "n_mv2lw2rg2p5w9",
+        "n_mv2lw2rg9kjz0",
+        "n_mv2lw2rg0zsk5",
+        "n_mv2lw2rg1qfl3",
+        "n_mv2lw2rg9tc2q",
+        "n_mv2lw2rg6lhk6",
+        "n_mv2lw2rg5fr57",
+        "n_mv2lw2rg5apvo"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

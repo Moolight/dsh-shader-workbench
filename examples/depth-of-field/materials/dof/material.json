@@ -1,0 +1,34 @@
+{
+  "id": "mat_mv2kvun76hsw3",
+  "name": "景深：按弥散圆半径做高斯模糊",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "dof.frag"
+  },
+  "uniforms": {
+    "uFocus": {
+      "name": "uFocus",
+      "type": "float",
+      "value": 3,
+      "min": 0,
+      "max": 12,
+      "label": "对焦距离"
+    },
+    "uAperture": {
+      "name": "uAperture",
+      "type": "float",
+      "value": 1,
+      "min": 0,
+      "max": 3,
+      "label": "光圈"
+    }
+  },
+  "textures": [],
+  "passes": [
+    "BufferA",
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:51:35.801Z"
+}

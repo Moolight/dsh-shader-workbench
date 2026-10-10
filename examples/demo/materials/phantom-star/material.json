@@ -1,0 +1,16 @@
+{
+  "id": "mat_mv2i31608ij48",
+  "name": "Phantom Star（IFS 隧道）",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "phantom-star.frag"
+  },
+  "uniforms": {},
+  "textures": [],
+  "passes": [
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:47:56.544Z"
+}

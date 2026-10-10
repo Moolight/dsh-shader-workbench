@@ -1,0 +1,15 @@
+# 开发期跑出来的东西，不进仓库
+node_modules/
+.probe-boot.log
+.probe-boot.log.err
+*.log
+
+# 材质快照（每次打快照都会多一份，属于用户数据不是源码）
+**/.snapshots/
+**/cache/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

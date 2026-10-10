@@ -1,0 +1,674 @@
+{
+  "id": "g_mv2msx7n9lagj",
+  "name": "Cubic Bezier (24 segment taps)",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2msx7n9ep98",
+      "type": "uniform",
+      "x": 0,
+      "y": 0,
+      "params": {
+        "name": "uP0",
+        "outType": "vec2"
+      }
+    },
+    {
+      "id": "n_mv2msx7n3xkh6",
+      "type": "uniform",
+      "x": 0,
+      "y": 140,
+      "params": {
+        "name": "uP1",
+        "outType": "vec2"
+      }
+    },
+    {
+      "id": "n_mv2msx7n81xpj",
+      "type": "uniform",
+      "x": 0,
+      "y": 280,
+      "params": {
+        "name": "uP2",
+        "outType": "vec2"
+      }
+    },
+    {
+      "id": "n_mv2msx7n46a23",
+      "type": "uniform",
+      "x": 0,
+      "y": 420,
+      "params": {
+        "name": "uP3",
+        "outType": "vec2"
+      }
+    },
+    {
+      "id": "n_mv2msx7n51kbv",
+      "type": "custom",
+      "x": 260,
+      "y": 40,
+      "params": {
+        "expr": "vec4($in.a.xy, $in.b.xy)"
+      }
+    },
+    {
+      "id": "n_mv2msx7n3vquy",
+      "type": "custom",
+      "x": 260,
+      "y": 200,
+      "params": {
+        "expr": "vec4($in.a.xy, $in.b.xy)"
+      }
+    },
+    {
+      "id": "n_mv2msx7n7voep",
+      "type": "custom",
+      "x": 260,
+      "y": 360,
+      "params": {
+        "expr": "vec4(9.0)"
+      }
+    },
+    {
+      "id": "n_mv2msx7n08yx3",
+      "type": "group",
+      "x": 560,
+      "y": 140,
+      "params": {
+        "repeat": 24,
+        "graph": {
+          "name": "贝塞尔描线：重复 24 段求最小距离",
+          "carries": [
+            "best"
+          ],
+          "inputs": [
+            {
+              "id": "p0",
+              "label": "P0",
+              "type": "vec2"
+            },
+            {
+              "id": "p1",
+              "label": "P1",
+              "type": "vec2"
+            },
+            {
+              "id": "p2",
+              "label": "P2",
+              "type": "vec2"
+            },
+            {
+              "id": "p3",
+              "label": "P3",
+              "type": "vec2"
+            },
+            {
+              "id": "best",
+              "label": "最小距离",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "best",
+              "label": "最小距离",
+              "type": "float"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "gi_p0",
+              "type": "groupInput",
+              "x": -560,
+              "y": 0,
+              "params": {
+                "port": "p0",
+                "type": "vec2"
+              }
+            },
+            {
+              "id": "gi_p1",
+              "type": "groupInput",
+              "x": -560,
+              "y": 110,
+              "params": {
+                "port": "p1",
+                "type": "vec2"
+              }
+            },
+            {
+              "id": "gi_p2",
+              "type": "groupInput",
+              "x": -560,
+              "y": 220,
+              "params": {
+                "port": "p2",
+                "type": "vec2"
+              }
+            },
+            {
+              "id": "gi_p3",
+              "type": "groupInput",
+              "x": -560,
+              "y": 330,
+              "params": {
+                "port": "p3",
+                "type": "vec2"
+              }
+            },
+            {
+              "id": "gi_best",
+              "type": "groupInput",
+              "x": -560,
+              "y": 440,
+              "params": {
+                "port": "best",
+                "type": "float"
+              }
+            },
+            {
+              "id": "pack01",
+              "type": "custom",
+              "x": -320,
+              "y": 0,
+              "params": {
+                "expr": "vec4($in.a.xy, $in.b.xy)"
+              }
+            },
+            {
+              "id": "pack23",
+              "type": "custom",
+              "x": -320,
+              "y": 200,
+              "params": {
+                "expr": "vec4($in.a.xy, $in.b.xy)"
+              }
+            },
+            {
+              "id": "idx",
+              "type": "loopIndex",
+              "x": -320,
+              "y": 400
+            },
+            {
+              "id": "t0n",
+              "type": "custom",
+              "x": -80,
+              "y": 330,
+              "params": {
+                "expr": "vec4($in.a.x / 24.0, 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "t1n",
+              "type": "custom",
+              "x": -80,
+              "y": 450,
+              "params": {
+                "expr": "vec4(($in.a.x + 1.0) / 24.0, 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "pa",
+              "type": "custom",
+              "x": 180,
+              "y": 250,
+              "params": {
+                "expr": "vec4(((1.0 - $in.c) * (1.0 - $in.c) * (1.0 - $in.c) * $in.a.xy) + (3.0 * (1.0 - $in.c) * (1.0 - $in.c) * $in.c * $in.a.zw) + (3.0 * (1.0 - $in.c) * $in.c * $in.c * $in.b.xy) + ($in.c * $in.c * $in.c * $in.b.zw), 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "pb",
+              "type": "custom",
+              "x": 180,
+              "y": 450,
+              "params": {
+                "expr": "vec4(((1.0 - $in.c) * (1.0 - $in.c) * (1.0 - $in.c) * $in.a.xy) + (3.0 * (1.0 - $in.c) * (1.0 - $in.c) * $in.c * $in.a.zw) + (3.0 * (1.0 - $in.c) * $in.c * $in.c * $in.b.xy) + ($in.c * $in.c * $in.c * $in.b.zw), 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "packab",
+              "type": "custom",
+              "x": 440,
+              "y": 350,
+              "params": {
+                "expr": "vec4($in.a.xy, $in.b.xy)"
+              }
+            },
+            {
+              "id": "segdist",
+              "type": "custom",
+              "x": 680,
+              "y": 350,
+              "params": {
+                "expr": "vec4(length(((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y)) - ($in.b.xy + clamp(dot(((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y)) - $in.b.xy, $in.b.zw - $in.b.xy) / max(dot($in.b.zw - $in.b.xy, $in.b.zw - $in.b.xy), 1e-8), 0.0, 1.0) * ($in.b.zw - $in.b.xy))))"
+              }
+            },
+            {
+              "id": "best_new",
+              "type": "custom",
+              "x": 940,
+              "y": 350,
+              "params": {
+                "expr": "vec4(min($in.a.x, $in.b.x), 0.0, 0.0, 1.0)"
+              }
+            },
+            {
+              "id": "go",
+              "type": "groupOutput",
+              "x": 1180,
+              "y": 350,
+              "params": {
+                "port": "best",
+                "type": "float"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "gi_p0",
+                "port": "out"
+              },
+              "to": {
+                "node": "pack01",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_p1",
+                "port": "out"
+              },
+              "to": {
+                "node": "pack01",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_p2",
+                "port": "out"
+              },
+              "to": {
+                "node": "pack23",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_p3",
+                "port": "out"
+              },
+              "to": {
+                "node": "pack23",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "idx",
+                "port": "out"
+              },
+              "to": {
+                "node": "t0n",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "idx",
+                "port": "out"
+              },
+              "to": {
+                "node": "t1n",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pack01",
+                "port": "out"
+              },
+              "to": {
+                "node": "pa",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pack23",
+                "port": "out"
+              },
+              "to": {
+                "node": "pa",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "t0n",
+                "port": "out"
+              },
+              "to": {
+                "node": "pa",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "pack01",
+                "port": "out"
+              },
+              "to": {
+                "node": "pb",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pack23",
+                "port": "out"
+              },
+              "to": {
+                "node": "pb",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "t1n",
+                "port": "out"
+              },
+              "to": {
+                "node": "pb",
+                "port": "c"
+              }
+            },
+            {
+              "from": {
+                "node": "pa",
+                "port": "out"
+              },
+              "to": {
+                "node": "packab",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "pb",
+                "port": "out"
+              },
+              "to": {
+                "node": "packab",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "packab",
+                "port": "out"
+              },
+              "to": {
+                "node": "segdist",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "segdist",
+                "port": "out"
+              },
+              "to": {
+                "node": "best_new",
+                "port": "a"
+              }
+            },
+            {
+              "from": {
+                "node": "gi_best",
+                "port": "out"
+              },
+              "to": {
+                "node": "best_new",
+                "port": "b"
+              }
+            },
+            {
+              "from": {
+                "node": "best_new",
+                "port": "out"
+              },
+              "to": {
+                "node": "go",
+                "port": "color"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_mv2msx7n9wb2r",
+      "type": "custom",
+      "x": 900,
+      "y": 100,
+      "params": {
+        "expr": "vec4(mix(\nmix(vec3(0.03, 0.04, 0.06), vec3(0.30, 0.42, 0.60), smoothstep(0.010, 0.0, min(min(length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - ($in.a.xy + clamp(dot((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.a.xy, $in.a.zw - $in.a.xy) / max(dot($in.a.zw - $in.a.xy, $in.a.zw - $in.a.xy), 1e-8), 0.0, 1.0) * ($in.a.zw - $in.a.xy))), length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - ($in.a.zw + clamp(dot((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.a.zw, $in.b.xy - $in.a.zw) / max(dot($in.b.xy - $in.a.zw, $in.b.xy - $in.a.zw), 1e-8), 0.0, 1.0) * ($in.b.xy - $in.a.zw)))), length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - ($in.b.xy + clamp(dot((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.b.xy, $in.b.zw - $in.b.xy) / max(dot($in.b.zw - $in.b.xy, $in.b.zw - $in.b.xy), 1e-8), 0.0, 1.0) * ($in.b.zw - $in.b.xy)))))),\nvec3(0.25, 0.95, 1.00), smoothstep(0.011, 0.004, $in.c)\n) +\nvec3(0.95, 0.75, 0.30) * (smoothstep(0.028, 0.016, length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.a.xy)) + smoothstep(0.028, 0.016, length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.a.zw)) + smoothstep(0.028, 0.016, length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.b.xy)) + smoothstep(0.028, 0.016, length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - $in.b.zw))) +\nvec3(1.00, 0.85, 0.40) * smoothstep(0.055, 0.0, length((gl_FragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y) - ((1.0 - fract(iTime * 0.18)) * (1.0 - fract(iTime * 0.18)) * (1.0 - fract(iTime * 0.18)) * $in.a.xy + 3.0 * (1.0 - fract(iTime * 0.18)) * (1.0 - fract(iTime * 0.18)) * fract(iTime * 0.18) * $in.a.zw + 3.0 * (1.0 - fract(iTime * 0.18)) * fract(iTime * 0.18) * fract(iTime * 0.18) * $in.b.xy + fract(iTime * 0.18) * fract(iTime * 0.18) * fract(iTime * 0.18) * $in.b.zw))), 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2msx7n7tfjb",
+      "type": "output",
+      "x": 1200,
+      "y": 100,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2msx7n8578o",
+      "from": {
+        "node": "n_mv2msx7n9ep98",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n51kbv",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx7n5px36",
+      "from": {
+        "node": "n_mv2msx7n3xkh6",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n51kbv",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2msx7n0o2so",
+      "from": {
+        "node": "n_mv2msx7n81xpj",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n3vquy",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx7n9qu1j",
+      "from": {
+        "node": "n_mv2msx7n46a23",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n3vquy",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2msx7n48zc0",
+      "from": {
+        "node": "n_mv2msx7n9ep98",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "p0"
+      }
+    },
+    {
+      "id": "e_mv2msx7n6x277",
+      "from": {
+        "node": "n_mv2msx7n3xkh6",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "p1"
+      }
+    },
+    {
+      "id": "e_mv2msx7n7fixm",
+      "from": {
+        "node": "n_mv2msx7n81xpj",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "p2"
+      }
+    },
+    {
+      "id": "e_mv2msx7n7dlqa",
+      "from": {
+        "node": "n_mv2msx7n46a23",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "p3"
+      }
+    },
+    {
+      "id": "e_mv2msx7n026tw",
+      "from": {
+        "node": "n_mv2msx7n7voep",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "best"
+      }
+    },
+    {
+      "id": "e_mv2msx7n9lslx",
+      "from": {
+        "node": "n_mv2msx7n51kbv",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n9wb2r",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2msx7n3rj9y",
+      "from": {
+        "node": "n_mv2msx7n3vquy",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n9wb2r",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2msx7n0j3oz",
+      "from": {
+        "node": "n_mv2msx7n08yx3",
+        "port": "best"
+      },
+      "to": {
+        "node": "n_mv2msx7n9wb2r",
+        "port": "c"
+      }
+    },
+    {
+      "id": "e_mv2msx7n9khg0",
+      "from": {
+        "node": "n_mv2msx7n9wb2r",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2msx7n7tfjb",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [
+    {
+      "name": "uP0",
+      "type": "vec2",
+      "value": [
+        -0.62,
+        -0.42
+      ],
+      "label": "P0"
+    },
+    {
+      "name": "uP1",
+      "type": "vec2",
+      "value": [
+        -0.2,
+        0.72
+      ],
+      "label": "P1"
+    },
+    {
+      "name": "uP2",
+      "type": "vec2",
+      "value": [
+        0.3,
+        -0.78
+      ],
+      "label": "P2"
+    },
+    {
+      "name": "uP3",
+      "type": "vec2",
+      "value": [
+        0.66,
+        0.36
+      ],
+      "label": "P3"
+    }
+  ],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2msx7n9ep98",
+        "n_mv2msx7n3xkh6",
+        "n_mv2msx7n81xpj",
+        "n_mv2msx7n46a23",
+        "n_mv2msx7n51kbv",
+        "n_mv2msx7n3vquy",
+        "n_mv2msx7n7voep",
+        "n_mv2msx7n08yx3",
+        "n_mv2msx7n9wb2r",
+        "n_mv2msx7n7tfjb"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

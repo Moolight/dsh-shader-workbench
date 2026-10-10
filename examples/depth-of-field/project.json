@@ -1,0 +1,10 @@
+{
+  "name": "depth-of-field",
+  "title": "depth-of-field",
+  "description": "",
+  "createdAt": "2026-10-10T15:57:53.243Z",
+  "updatedAt": "2026-10-10T16:51:35.798Z",
+  "materials": [
+    "dof"
+  ]
+}

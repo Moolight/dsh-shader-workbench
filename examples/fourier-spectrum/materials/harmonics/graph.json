@@ -1,0 +1,346 @@
+{
+  "id": "g_mv2lw2qj3iv5n",
+  "name": "谐波频谱（一根柱一个节点）",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n_mv2lw2qj3ighh",
+      "type": "uv",
+      "x": 0,
+      "y": 0,
+      "params": {}
+    },
+    {
+      "id": "n_mv2lw2qj7xtuh",
+      "type": "custom",
+      "x": 0,
+      "y": 200,
+      "params": {
+        "expr": "vec4(0.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj4smfp",
+      "type": "custom",
+      "x": 300,
+      "y": 0,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.0313), 0.0206) * step($in.a.y, 0.9156) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj4w00r",
+      "type": "custom",
+      "x": 326,
+      "y": 96,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.0938), 0.0206) * step($in.a.y, 0.4252) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj93hw0",
+      "type": "custom",
+      "x": 352,
+      "y": 192,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.1563), 0.0206) * step($in.a.y, 0.3271) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj9yv2f",
+      "type": "custom",
+      "x": 378,
+      "y": 288,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.2188), 0.0206) * step($in.a.y, 0.2851) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj6b5zs",
+      "type": "custom",
+      "x": 404,
+      "y": 384,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.2813), 0.0206) * step($in.a.y, 0.2617) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj2xl7l",
+      "type": "custom",
+      "x": 430,
+      "y": 480,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.3438), 0.0206) * step($in.a.y, 0.2469) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj8zk15",
+      "type": "custom",
+      "x": 456,
+      "y": 576,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.4063), 0.0206) * step($in.a.y, 0.2366) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj4v633",
+      "type": "custom",
+      "x": 482,
+      "y": 672,
+      "params": {
+        "expr": "vec4(max($in.b.x, step(abs($in.a.x - 0.4688), 0.0206) * step($in.a.y, 0.2290) * step(0.18, $in.a.y)))"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj9627r",
+      "type": "custom",
+      "x": 900,
+      "y": 0,
+      "params": {
+        "expr": "vec4(mix(\nvec3(0.03, 0.04, 0.06),\nvec3(0.30, 0.90, 1.00), $in.b.x\n) + vec3(0.06, 0.08, 0.11) * step(abs($in.a.y - 0.18), 0.0025), 1.0)"
+      }
+    },
+    {
+      "id": "n_mv2lw2qj37ue5",
+      "type": "output",
+      "x": 1500,
+      "y": 0,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mv2lw2qj4zys3",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4smfp",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj8ybij",
+      "from": {
+        "node": "n_mv2lw2qj7xtuh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4smfp",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj2ou8l",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4w00r",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj49wp3",
+      "from": {
+        "node": "n_mv2lw2qj4smfp",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4w00r",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj1wg28",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj93hw0",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj5y2p2",
+      "from": {
+        "node": "n_mv2lw2qj4w00r",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj93hw0",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj8strj",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj9yv2f",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj8d7l0",
+      "from": {
+        "node": "n_mv2lw2qj93hw0",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj9yv2f",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj726as",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj6b5zs",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj1a3li",
+      "from": {
+        "node": "n_mv2lw2qj9yv2f",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj6b5zs",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj0ofs4",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj2xl7l",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj39teg",
+      "from": {
+        "node": "n_mv2lw2qj6b5zs",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj2xl7l",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj08j4m",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj8zk15",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj0fs7e",
+      "from": {
+        "node": "n_mv2lw2qj2xl7l",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj8zk15",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj8558m",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4v633",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj84xzp",
+      "from": {
+        "node": "n_mv2lw2qj8zk15",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj4v633",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj6vliw",
+      "from": {
+        "node": "n_mv2lw2qj3ighh",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj9627r",
+        "port": "a"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj6tmmw",
+      "from": {
+        "node": "n_mv2lw2qj4v633",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj9627r",
+        "port": "b"
+      }
+    },
+    {
+      "id": "e_mv2lw2qj0r9r0",
+      "from": {
+        "node": "n_mv2lw2qj9627r",
+        "port": "out"
+      },
+      "to": {
+        "node": "n_mv2lw2qj37ue5",
+        "port": "color"
+      }
+    }
+  ],
+  "uniforms": [],
+  "passes": [
+    {
+      "name": "image",
+      "graph": [
+        "n_mv2lw2qj3ighh",
+        "n_mv2lw2qj7xtuh",
+        "n_mv2lw2qj4smfp",
+        "n_mv2lw2qj4w00r",
+        "n_mv2lw2qj93hw0",
+        "n_mv2lw2qj9yv2f",
+        "n_mv2lw2qj6b5zs",
+        "n_mv2lw2qj2xl7l",
+        "n_mv2lw2qj8zk15",
+        "n_mv2lw2qj4v633",
+        "n_mv2lw2qj9627r",
+        "n_mv2lw2qj37ue5"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": []
+  }
+}

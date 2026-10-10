@@ -1,0 +1,26 @@
+{
+  "id": "mat_mv2kvumc0cje0",
+  "name": "高斯模糊：9 抽样可分离核",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "blur.frag"
+  },
+  "uniforms": {
+    "uRadius": {
+      "name": "uRadius",
+      "type": "float",
+      "value": 0.028,
+      "min": 0,
+      "max": 0.06,
+      "label": "模糊半径"
+    }
+  },
+  "textures": [],
+  "passes": [
+    "BufferA",
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [],
+  "updatedAt": "2026-10-10T16:51:35.740Z"
+}
