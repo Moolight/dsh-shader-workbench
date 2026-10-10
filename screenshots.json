@@ -1,0 +1,9 @@
+[
+  "examples/demo/materials/phantom-star/preview.png",
+  "examples/fourier-epicycles/materials/epicycles/preview.png",
+  "examples/gaussian-blur/materials/blur/preview.png",
+  "examples/depth-of-field/materials/dof/preview.png",
+  "examples/bezier/materials/curve/preview.png",
+  "examples/fourier-series/materials/square-wave/preview.png",
+  "examples/fourier-spectrum/materials/harmonics/preview.png"
+]
