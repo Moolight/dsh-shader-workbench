@@ -70,9 +70,28 @@ node <pnpm.cjs 路径> install
 | `depth-of-field` | **景深**：深度写进 alpha，模糊半径按弥散圆算，焦点可拖 |
 | `bezier` | **三次贝塞尔**：24 段采样是一个**重复组**（`loopIndex` 给段号），四个控制点可拖 |
 
-**七个示例一个新节点都没加**，全部用现有组件搭：前四个把循环**展开成普通节点**
-铺在画布上，后三个用 `group` 元节点把几十个节点包成一颗（组可以右键「拆开组」还原，
-不是黑盒）。详见 [`examples/README.md`](examples/README.md)。
+**七个示例一个新节点都没加**，全部用现有组件搭：循环用「重复组」（循环体只写一遍），
+重活用 `group` 元节点包起来（右键「拆开组」就能还原成普通节点，不是黑盒）。
+详见 [`examples/README.md`](examples/README.md)。
+
+<table>
+<tr>
+<td align="center"><img src="examples/demo/materials/phantom-star/preview.png" width="330"><br><sub><b>demo</b> — IFS 隧道<br>99 步累积 = 一个重复组，和原版逐像素一致</sub></td>
+<td align="center"><img src="examples/fourier-series/materials/square-wave/preview.png" width="330"><br><sub><b>fourier-series</b> — 方波 = 正弦叠加<br>每个谐波一个节点，想加项就再加一个</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="examples/fourier-spectrum/materials/harmonics/preview.png" width="330"><br><sub><b>fourier-spectrum</b> — 谐波频谱<br>每根柱一个节点</sub></td>
+<td align="center"><img src="examples/fourier-epicycles/materials/epicycles/preview.png" width="330"><br><sub><b>fourier-epicycles</b> — DFT 本轮画心形<br>轨迹靠 BufferA 反馈攒出来</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="examples/gaussian-blur/materials/blur/preview.png" width="330"><br><sub><b>gaussian-blur</b> — 9 抽样高斯模糊<br>双 Pass，半径可拖</sub></td>
+<td align="center"><img src="examples/depth-of-field/materials/dof/preview.png" width="330"><br><sub><b>depth-of-field</b> — 景深<br>深度写进 alpha，焦点可拖</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="examples/bezier/materials/curve/preview.png" width="330"><br><sub><b>bezier</b> — 三次贝塞尔<br>24 段采样是一个重复组</sub></td>
+<td></td>
+</tr>
+</table>
 
 工作区空着时，空状态里也有一个「载入示例」入口；同名已存在会先问一句要不要覆盖。
 
