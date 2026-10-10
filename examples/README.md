@@ -91,6 +91,8 @@ demo/
 
 ### fourier-series — 方波 = 正弦叠加
 
+<img src="fourier-series/materials/square-wave/preview.png" width="420">
+
 理想方波（灰色虚线）vs 前 N 项正弦之和（青色）。调「项数」能直接看到两件事：
 
 - 项数越多越贴近方波；
@@ -100,6 +102,8 @@ demo/
 能看清"每一项长什么样、它们是怎么凑出方波的"。
 
 ### fourier-spectrum — 每根柱是一次谐波
+
+<img src="fourier-spectrum/materials/harmonics/preview.png" width="420">
 
 上面是这些分量重建出来的波形，下面是频谱：柱高 = 该次谐波的幅度。
 方波只有奇次谐波，幅度按 `1/n` 衰减（1、1/3、1/5、1/7…），
@@ -148,6 +152,8 @@ demo/
 "糊"是怎么发生的。
 
 ### depth-of-field — 半径由深度决定
+
+<img src="depth-of-field/materials/dof/preview.png" width="420">
 
 同一个模糊组，只是半径不接滑块，接一个算**弥散圆**的 `custom`：
 `|深度 − 对焦距离| × 光圈`。
