@@ -240,3 +240,154 @@ test('预设走 HTTP 读写', async () => {
   const one = await api('preset.read', { id: 'cool' });
   assert.equal(one.body.preset.data.exposure, 0.8);
 });
+
+// ─────────────────────────── FR-06 / FR-10 的新 action ───────────────────────────
+
+test('material.exportTargets 列出的目标与注册表一致（面板不该写死）', async () => {
+  const { body } = await api('material.exportTargets');
+  assert.equal(body.ok, true);
+  const ids = body.targets.map((t) => t.id);
+  for (const id of ['glsl', 'hlsl', 'msl', 'spirv', 'spvasm']) {
+    assert.ok(ids.includes(id), `少了导出目标 ${id}：${ids.join(',')}`);
+  }
+  const spirv = body.targets.find((t) => t.id === 'spirv');
+  assert.equal(spirv.binary, true, 'spirv 是二进制目标，面板要据此走下载而不是插进编辑器');
+  assert.equal(spirv.extension, 'spv');
+  assert.equal(body.targets.find((t) => t.id === 'glsl').binary, false);
+});
+
+test('material.export 走 HTTP：文本目标回 code、二进制目标回 base64', async () => {
+  await api('project.create', { name: 'exp' });
+  await api('material.create', { project: 'exp', name: 'plain' });
+
+  // 造一张最简单的能编译的图：uv → output
+  const uv = makeNode('uv', 0, 0);
+  const out = makeNode('output', 300, 0);
+  const graph = makeGraph({
+    name: 'plain',
+    nodes: [uv, out],
+    edges: [makeEdge(uv.id, 'out', out.id, 'color')],
+  });
+  setPassNodes(graph, 'image', graph.nodes.map((n) => n.id));
+  await api('material.save', { project: 'exp', material: 'plain', graph });
+
+  const glsl = await api('material.export', { project: 'exp', material: 'plain', target: 'glsl' });
+  assert.equal(glsl.status, 200, JSON.stringify(glsl.body));
+  assert.match(glsl.body.code, /void main\(\)/);
+  assert.match(glsl.body.fileName, /\.frag$/);
+
+  const hlsl = await api('material.export', { project: 'exp', material: 'plain', target: 'hlsl' });
+  assert.equal(hlsl.body.ok, true, JSON.stringify(hlsl.body.errors));
+  assert.equal(hlsl.body.binary, false);
+  assert.match(hlsl.body.fileName, /\.hlsl$/);
+
+  const spv = await api('material.export', { project: 'exp', material: 'plain', target: 'spirv' });
+  assert.equal(spv.body.ok, true, JSON.stringify(spv.body.errors));
+  assert.equal(spv.body.binary, true);
+  assert.match(spv.body.fileName, /\.spv$/);
+  assert.ok(spv.body.bytes > 0);
+  // 二进制必须带 base64，否则面板没法触发下载
+  const bytes = Buffer.from(spv.body.data, 'base64');
+  assert.equal(bytes.length, spv.body.bytes);
+  assert.equal(bytes.readUInt32LE(0), 0x07230203, '不是 SPIR-V 的魔数');
+  // 文档里必须说清"没经过 spirv-val"，不能让人以为验过了
+  assert.match(spv.body.note, /spirv-val/);
+});
+
+test('material.export 对不认识的 target / 编不过的图给明确报错', async () => {
+  const bad = await api('material.export', { project: 'exp', material: 'plain', target: 'cuda' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error.message, /不认识的导出目标/);
+
+  const missing = await api('material.export', { project: 'exp', material: 'nope', target: 'glsl' });
+  assert.equal(missing.status, 400);
+  assert.match(missing.body.error.message, /材质不存在/);
+});
+
+test('material.importShadertoy 走 HTTP：落用户节点 + 换图 + 回特征', async () => {
+  await api('material.create', { project: 'exp', name: 'imported' });
+  const source = [
+    'float wave(vec2 p, float t) { return sin(p.x * 10.0 + t) * 0.5 + 0.5; }',
+    'void mainImage(out vec4 fragColor, in vec2 fragCoord) {',
+    '  vec2 uv = fragCoord / iResolution.xy;',
+    '  vec3 col = vec3(uv, wave(uv, iTime));',
+    '  col += texture(iChannel0, uv).rgb * 0.1;',
+    '  fragColor = vec4(col, 1.0);',
+    '}',
+  ].join('\n');
+
+  const res = await api('material.importShadertoy', {
+    project: 'exp',
+    material: 'imported',
+    source,
+    sourceUrl: 'https://www.shadertoy.com/view/abc',
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.nodeType, 'shadertoyMain');
+  assert.deepEqual(res.body.features.channels, ['iChannel0']);
+  assert.ok(res.body.userNodeTypes.includes('shadertoyMain'), '导入的节点没进库');
+
+  // 图真的被换成了「Shadertoy 节点 + output」
+  const read = await api('material.read', { project: 'exp', material: 'imported' });
+  assert.equal(read.body.graph.nodes.length, 2);
+  assert.equal(read.body.graph.edges.length, 1);
+  assert.equal(read.body.graph.metadata.source, 'https://www.shadertoy.com/view/abc');
+
+  // 换图之后编译要能过，而且 iChannel0 被声明成 sampler
+  const compiled = await api('shader.compile', { graph: read.body.graph, pass: 'image' });
+  assert.equal(compiled.body.ok, true, JSON.stringify(compiled.body.errors));
+  assert.match(compiled.body.code, /uniform sampler2D iChannel0;/);
+  assert.match(compiled.body.code, /st_shadertoyMain\(gl_FragCoord\.xy\)/);
+
+  // 节点定义落在工作区级的 library/nodes 下（不是材质目录里）
+  const nodes = await api('nodelib.status');
+  assert.ok(nodes.body.userDefs.some((d) => d.type === 'shadertoyMain'));
+});
+
+test('material.importShadertoy：源码不对时报 400，且不把材质改坏', async () => {
+  await api('material.create', { project: 'exp', name: 'keepme' });
+  const before = await api('material.read', { project: 'exp', material: 'keepme' });
+
+  const bad = await api('material.importShadertoy', {
+    project: 'exp',
+    material: 'keepme',
+    source: 'void main() { gl_FragColor = vec4(1.0); }',
+  });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error.message, /找不到 mainImage/);
+
+  const after = await api('material.read', { project: 'exp', material: 'keepme' });
+  assert.deepEqual(
+    after.body.graph.nodes.map((n) => n.type),
+    before.body.graph.nodes.map((n) => n.type),
+    '导入失败却动了材质图',
+  );
+});
+
+test('material.exportZip 走 HTTP：包自洽、条目名带材质目录、base64 能还原', async () => {
+  const res = await api('material.exportZip', { project: 'exp', material: 'imported' });
+  assert.equal(res.status, 200, JSON.stringify(res.body).slice(0, 300));
+  assert.match(res.body.fileName, /\.zip$/);
+  assert.ok(res.body.bytes > 0);
+  assert.equal(res.body.fileCount, res.body.materialFileCount + 1, 'fileCount 应当等于材质文件数 + 说明.txt');
+
+  const bytes = Buffer.from(res.body.data, 'base64');
+  assert.equal(bytes.length, res.body.bytes);
+  assert.equal(bytes.readUInt32LE(0), 0x04034b50, '不是本地文件头签名');
+
+  // 条目清单：说明.txt 在最前，材质文件都带 `<材质名>/` 前缀
+  assert.equal(res.body.entries[0], '说明.txt');
+  assert.ok(res.body.entries.some((n) => n.startsWith('imported/')));
+  assert.ok(res.body.entries.includes('imported/graph.json'));
+  assert.ok(res.body.entries.includes('imported/material.json'));
+
+  // 说明.txt 里应当写清来源与条目数
+  const note = await api('material.read', { project: 'exp', material: 'imported' });
+  assert.ok(note.body.ok);
+});
+
+test('material.exportZip：材质不存在时报错，不产出一个空包', async () => {
+  const res = await api('material.exportZip', { project: 'exp', material: 'ghost' });
+  assert.equal(res.status, 400);
+  assert.match(res.body.error.message, /材质不存在/);
+});

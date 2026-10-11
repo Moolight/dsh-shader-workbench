@@ -1,0 +1,10 @@
+{
+  "name": "music",
+  "title": "FFT 音频可视化",
+  "description": "world.execute(me) 的傅里叶变换可视化",
+  "createdAt": "2026-10-11T00:00:00.000Z",
+  "updatedAt": "2026-10-11T00:00:00.000Z",
+  "materials": [
+    "music"
+  ]
+}

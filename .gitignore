@@ -4,6 +4,9 @@ node_modules/
 .probe-boot.log.err
 *.log
 
+# 测试跑出来的浏览器 profile / 探针缓存（几万个小文件，别进仓库）
+.cache/
+
 # 材质快照（每次打快照都会多一份，属于用户数据不是源码）
 **/.snapshots/
 **/cache/

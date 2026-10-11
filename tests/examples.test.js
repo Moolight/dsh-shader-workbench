@@ -41,6 +41,7 @@ const EXPECTED = [
   'gaussian-blur',
   'depth-of-field',
   'bezier',
+  'music',
 ];
 
 /**

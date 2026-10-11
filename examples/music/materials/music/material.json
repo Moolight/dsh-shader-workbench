@@ -1,0 +1,20 @@
+{
+  "id": "mat_music",
+  "name": "FFT 音频可视化",
+  "graphPath": "graph.json",
+  "shaderFiles": {
+    "frag": "music.frag"
+  },
+  "uniforms": {},
+  "resources": [],
+  "passes": [
+    "BufferA",
+    "image"
+  ],
+  "comfyWorkflows": [],
+  "tags": [
+    "audio",
+    "fft"
+  ],
+  "updatedAt": "2026-10-11T12:43:34.276Z"
+}

@@ -213,8 +213,14 @@ export class ShaderToy {
     this.channels = new Map();
     /** 上传过的通道纹理，{ texture, width, height } */
     this.channelTextures = new Map();
+       /** 绑定的音频源，{ slot, analyser, texture, width, gain, node } */
+    this._audioSources = [];
+    /** 懒创建的 AudioContext */
+    this.audioContext = null;
     /** 自定义 uniform 值 */
     this.uniforms = new Map();
+       /** 当前图的 id，用来区分「换图」和「同图热重载」 */
+    this.currentGraphId = null;
     /** 用到的 uniform 位置缓存：pass 名 → Map<name, location> */
     this.locations = new Map();
 
@@ -296,6 +302,11 @@ export class ShaderToy {
    * @returns {{ok:boolean, errors:object[], compiled:Record<string,object>}}
    */
   setGraph(graph, opts = {}) {
+      // 区分「换图」和「热重载」：换图要清空 Buffer，热重载要保留拖尾。
+    // 判据用 graph.id —— 同一张图反复编译时 id 不变，换材质/换示例时 id 会变。
+    const graphId = typeof graph?.id === 'string' ? graph.id : null;
+    const isSwitch = this.currentGraphId !== null && this.currentGraphId !== graphId;
+    this.currentGraphId = graphId;
     const uniformValues = opts.uniforms ?? Object.fromEntries(this.uniforms);
     const compiled = {};
     const errors = [];
@@ -314,6 +325,7 @@ export class ShaderToy {
     if (errors.length > 0) {
       this.compiles = compiled;
       for (const err of errors) this.errors.push(`${err.pass}: ${err.message}`);
+        if (isSwitch) this._clearCanvas();  
       return { ok: false, errors, compiled };
     }
 
@@ -328,6 +340,7 @@ export class ShaderToy {
     }
     if (errors.length > 0) {
       this.compiles = compiled;
+        if (isSwitch) this._clearCanvas();  
       return { ok: false, errors, compiled };
     }
 
@@ -337,6 +350,10 @@ export class ShaderToy {
         this._disposePass(name);
       }
     }
+     // 切图：把上一份图留在所有 Buffer Pass 里的内容清掉。
+    // 不清的话，两份图都用 BufferA 时会读到上一份的最后一帧（因为 PassTarget
+    // 是按 pass 名复用的），拖尾效果会带着老图一起拖。
+    if (isSwitch) this._clearAllBuffers();
     this.compiles = compiled;
     return { ok: true, errors: [], compiled };
   }
@@ -388,6 +405,95 @@ export class ShaderToy {
     }
     this.channels.set(slot, source);
     return true;
+  }
+
+   /**
+   * 把一个音频源绑到某个 iChannel 槽位。
+   *
+   * 纹理布局与 Shadertoy 一致：宽 = fftSize/2，高 2。
+   *   y = 0（底行）  FFT 频谱（灰度）
+   *   y = 1（顶行）  波形（居中于 0.5）
+   *
+   * 必须在用户手势里调用（浏览器的自动播放策略）。
+   *
+   * @param {string} slot 'iChannel0'..'iChannel3'
+   * @param {HTMLAudioElement|HTMLVideoElement|MediaStreamAudioSourceNode} source
+   * @param {object} [opts] { fftSize, smoothing, gain }
+   */
+  async attachAudio(slot, source, opts = {}) {
+    if (!/^iChannel[0-3]$/.test(slot)) throw new Error(`非法通道名：${slot}`);
+
+    const ctx = (this.audioContext ??= new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === 'suspended') await ctx.resume();
+
+    // 已有同槽位的音频源：先撤掉
+    const previous = this._audioSources.findIndex((a) => a.slot === slot);
+    if (previous >= 0) this._detachAudioAt(previous);
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = opts.fftSize ?? 2048;
+    analyser.smoothingTimeConstant = opts.smoothing ?? 0.8;
+
+    // 从 <audio>/<video> 建 MediaElementSource 只能建一次，否则抛 InvalidStateError
+    let node;
+    if (typeof MediaStreamAudioSourceNode !== 'undefined' && source instanceof MediaStreamAudioSourceNode) {
+      node = source;
+    } else if (source.__dshAudioNode) {
+      node = source.__dshAudioNode;
+    } else {
+      node = ctx.createMediaElementSource(source);
+      source.__dshAudioNode = node;
+    }
+
+    const gain = ctx.createGain();
+    gain.gain.value = opts.gain ?? 1;
+    node.connect(analyser);
+    node.connect(gain);
+    gain.connect(ctx.destination);
+
+    const gl = this.gl;
+    const width = analyser.frequencyBinCount;   // = fftSize / 2
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    // R8 单通道：采样回来的 .x 就是 0..1
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, width, 2, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    this._audioSources.push({ slot, analyser, texture, width, gain, node, buf: null });
+    // WebGLTexture 会被 _channelTexture 直接透传，不经过图片上传那条路
+    this.setChannel(slot, texture);
+    return { analyser, texture, width };
+  }
+
+  /** 解绑一个槽位上的音频源（不碰 AudioContext 本身）。 */
+  _detachAudioAt(index) {
+    const entry = this._audioSources[index];
+    if (!entry) return;
+    try { entry.node.disconnect(); entry.gain.disconnect(); } catch { /* 已断开 */ }
+    this.gl.deleteTexture(entry.texture);
+    this.channels.delete(entry.slot);
+    this._audioSources.splice(index, 1);
+  }
+
+  /** 每帧把 AnalyserNode 的数据刷进纹理。 */
+  _updateAudioTextures() {
+    if (this._audioSources.length === 0) return;
+    const gl = this.gl;
+    for (const src of this._audioSources) {
+      const buf = src.buf ?? (src.buf = new Uint8Array(src.width));
+
+      // y = 0：频谱
+      src.analyser.getByteFrequencyData(buf);
+      gl.bindTexture(gl.TEXTURE_2D, src.texture);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, src.width, 1, gl.RED, gl.UNSIGNED_BYTE, buf);
+
+      // y = 1：波形（0..255，居中于 128 → 采样回来是 0..1）
+      src.analyser.getByteTimeDomainData(buf);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 1, src.width, 1, gl.RED, gl.UNSIGNED_BYTE, buf);
+    }
   }
 
   /**
@@ -482,7 +588,7 @@ export class ShaderToy {
     if (this.disposed) return;
     const gl = this.gl;
     const { width, height } = this._syncSize();
-
+ this._updateAudioTextures();
     if (this.config.playing) {
       this.time += dt * this.config.speed;
       this.frame += 1;
@@ -494,11 +600,16 @@ export class ShaderToy {
       this._renderPass(name, pass, width, height, true);
     }
 
-    // 2) 再跑 image Pass 到默认帧缓冲
+  // 2) 再跑 image Pass 到默认帧缓冲
     const image = this.passes.get('image');
     if (image) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, width, height);
+      // 必须清屏：WebGL2 上下文开了 preserveDrawingBuffer，不清的话
+      // 上一帧会透过新 shader 没覆盖到的像素显示出来 —— 切图/切材质时
+      // 表现为「旧画面残留在新画面边缘」。
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       this._drawPass('image', image, width, height);
     }
 
@@ -524,6 +635,39 @@ export class ShaderToy {
       gl.viewport(0, 0, pass.target.width, pass.target.height);
     }
     this._drawPass(name, pass, width, height);
+  }
+
+   /**
+   * 清空所有离屏 Pass 的双缓冲纹理。
+   *
+   * 用于「换图」：`PassTarget` 是按 pass 名维护的，切到一份也用了 BufferA
+   * 的新图时会复用老 target，不清空的话新图第一帧会读到上一份图的残留。
+   *
+   * @private
+   */
+  _clearAllBuffers() {
+    const gl = this.gl;
+    const previous = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.clearColor(0, 0, 0, 0);
+    for (const [name, pass] of this.passes) {
+      if (name === 'image') continue;
+      const target = pass.target;
+      if (!target || target.fbos.length === 0) continue;
+      for (const fbo of target.fbos) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previous);
+  }
+   /** 清空默认帧缓冲（切图失败时用，避免用户看到上一个材质的画面）。 */
+  _clearCanvas() {
+    const gl = this.gl;
+    const previous = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previous);
   }
 
   /**
@@ -811,8 +955,12 @@ export class ShaderToy {
   dispose() {
     if (this.disposed) return;
     this.stop();
+    
     for (const name of [...this.passes.keys()]) this._disposePass(name);
     for (const held of this.channelTextures.values()) this.gl.deleteTexture(held.texture);
+      for (let i = this._audioSources.length - 1; i >= 0; i -= 1) this._detachAudioAt(i);
+    this.audioContext?.close?.().catch(() => {});
+    this.audioContext = null;
     this.channelTextures.clear();
     if (this._fallback) this.gl.deleteTexture(this._fallback);
     if (this._vaoHandle) this.gl.deleteVertexArray(this._vaoHandle);

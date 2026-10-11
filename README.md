@@ -1,21 +1,28 @@
 # dsh-shader-workbench
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![tests](https://img.shields.io/badge/tests-98%20passing-brightgreen.svg)](docs/开发与验证.md)
+[![tests](https://img.shields.io/badge/tests-169%20passing-brightgreen.svg)](docs/开发与验证.md)
 [![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](docs/开发与验证.md)
 
 **简体中文** · [English](README.en.md)
 
 **DSH Shader 工作台**：节点式搭 GLSL → Shadertoy 兼容实时预览 → 热重载 → 本地材质资源管理。
 装在 [DSH（DeepSeek Harness）](https://github.com/deepseek-ai/deepseek-harness) 里是一个侧栏入口 + 一整块工作台面板，
-同时给 agent 开放 9 个工具，让它能直接建项目、搭节点图、编译、导出、打快照。
+同时给 agent 开放 11 个工具，让它能直接建项目、搭节点图、编译、导出、打快照。
 
 - **零第三方运行时依赖**：没有构建链，全是手写 ESM JavaScript，装上去就是一个目录。
-- **节点图 = 程序**：内置节点库只放 **55 个通用件**；效果专用逻辑一律拆成图上能展开编辑的普通节点，不做黑盒。
+- **节点图 = 程序**：内置节点库只放 **57 个通用件**；效果专用逻辑一律拆成图上能展开编辑的普通节点，不做黑盒。
 - **重复是语言结构**：组的「重复次数」> 1 就是循环，循环体只写一遍（IFS 隧道 99 步、贝塞尔 24 段都靠它，图和着色器小两个数量级）。
 - **可扩展、免重启**：用户节点丢个 JSON 进 `<工作区>/library/nodes/` 就能加；节点分类和项目名都支持多级。
+- **撤销重做 + 分组注释**：快照式撤销栈（数量 + 字节双预算、同类操作自动合并），画布上能框选打组、写注释。
+- **一份图，五个平台**：GLSL / HLSL / MSL / SPIR-V（`.spv` 二进制 + 人读 `.spvasm`）/ JSON bundle。
+  跨平台转译和 SPIR-V 二进制都是**自己写的**，不依赖任何外部 shader 工具链。
+- **Shadertoy 直接搬**：贴一段 `mainImage()` 源码就变成一个可复用的用户节点；材质能打包成 ZIP 带走。
+- **资源跟着材质走**：图片 / 音频 / 歌词统一进材质清单（`resources[]`，类型注册表可扩展）；
+  歌词是叠在画面上的 HTML 层，LRC 时间轴高亮，不占 shader。
 - **面板和 agent 共用一套工具与工作区**：存储位置能在面板里改，两边看到的永远是同一份数据。
-- **104 个用例**：含真机 WebGL2 编译校验、GPU 像素回读、真鼠标拖拽交互、1080p 性能度量。
+- **169 个用例**：含真机 WebGL2 编译校验、GPU 像素回读、真鼠标拖拽交互、1080p 性能度量、
+  跨平台转译的**逐点数值等价**验证。
 
 ## 装上
 
@@ -29,7 +36,7 @@ node <pnpm.cjs 路径> install
 然后重启 DSH，侧栏会出现「Shader 工作台」。存储位置、配置项、加载排查见
 [安装与配置](docs/安装与配置.md)。
 
-## 七个自带示例
+## 八个自带示例
 
 面板资源树里点 **载入示例** 即可。**一个新节点都没加**，全部用现有组件搭出来。
 
@@ -44,20 +51,20 @@ node <pnpm.cjs 路径> install
 </tr>
 </table>
 
-另外三个（傅里叶级数 / 谐波频谱 / 景深）和每个示例的做法见 [示例说明](examples/README.md)。
+另外四个（傅里叶级数 / 谐波频谱 / 景深 / FFT 音乐可视化）和每个示例的做法见 [示例说明](examples/README.md)。
 
 ## 文档
 
 | 文档 | 内容 |
 |---|---|
 | [安装与配置](docs/安装与配置.md) | 装上、存储位置与优先级、安全边界、加载排查 |
-| [使用手册](docs/使用手册.md) | 界面、画布操作与快捷键、节点库 55 个节点、9 个工具、工作区结构 |
+| [使用手册](docs/使用手册.md) | 界面、画布操作与快捷键、节点库 57 个节点、11 个工具、工作区结构 |
 | [扩展指南](docs/扩展指南.md) | 加节点的三条路：用户节点 / 组与重复组 / 内置节点 |
 | [开发与验证](docs/开发与验证.md) | 开发命令、真机验证与实测性能、体积、本版没做的 |
 | [接口契约](docs/接口契约.md) | HTTP 动作、节点定义与代码生成契约（**改代码前先看这份**） |
 | [架构说明](docs/架构说明.md) | 分层、数据流、关键设计取舍与踩过的坑 |
 | [验收报告](docs/验收报告.md) | 各里程碑的真机验收记录 |
-| [示例说明](examples/README.md) | 7 个示例分别演示了什么、怎么搭的 |
+| [示例说明](examples/README.md) | 8 个示例分别演示了什么、怎么搭的 |
 
 > 详细文档目前以中文为主；英文的 issue / PR 一样欢迎。
 

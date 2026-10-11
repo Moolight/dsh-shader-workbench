@@ -6,7 +6,7 @@
     "frag": "harmonics.frag"
   },
   "uniforms": {},
-  "textures": [],
+  "resources": [],
   "passes": [
     "image"
   ],

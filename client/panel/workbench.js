@@ -19,12 +19,28 @@ import { UnlitMaterialPreview, PREVIEW_SHAPES } from '../runtime/material-previe
 import { compileGraph } from '../runtime/codegen.js';
 import { makeGraph } from '../../shared/graph.js';
 import { setUserNodes } from '../../shared/nodes.js';
-
+import { LyricsOverlay } from './lyrics.js';
+import { bindAssets } from './asset-binder.js';
 /** API 前缀。 */
 const API_PREFIX = '/plugins/dsh-shader-workbench/';
 
 /** 开源仓库地址（导航按钮用；和 package.json 里的 repository 是同一份事实）。 */
 const REPO_URL = 'https://github.com/Moolight/dsh-shader-workbench';
+
+/**
+ * 这些改动只影响画布长相、不影响生成的 GLSL，所以不用重编译也不用重画参数面板。
+ *
+ * 分组框 / 注释是编辑器层的装饰件，压根不进代码生成；挪节点只改坐标。
+ * 漏一个在这里的代价是「拖一下框，整个右侧闪一下」——不致命但很廉价地烦人。
+ */
+const GRAPH_ONLY_VISUAL_REASONS = new Set([
+  'move-node',
+  'move-frame',
+  'resize-frame',
+  'add-frame',
+  'delete-frame',
+  'update-frame',
+]);
 
 /**
  * 一个"打开外部链接"的按钮。
@@ -64,6 +80,8 @@ export class Workbench {
 
     this.root = h('div.swb');
     this._build();
+    // 焦点在工作台里（画布 / 滑杆 / 按钮…）时 Ctrl+Z 都能用，出了工作台不管
+    this.root.addEventListener('keydown', (e) => this._onRootKeyDown(e));
   }
 
   // ─────────────────────── 搭建 ───────────────────────
@@ -75,7 +93,11 @@ export class Workbench {
     this.previewStats = h('div.swb-preview__stats');
     this.previewError = h('div.swb-preview__error');
     this.previewError.hidden = true;
-
+   // 歌词叠加层：自包含组件，这里只负责实例化 + 接线
+    this.lyrics = new LyricsOverlay({
+      getAudio: () => this._audio,
+      onLog: (text, tone) => this.log(text, tone),
+    });
     // 编辑器
     this.editor = new NodeEditor({
       graph: this.graph,
@@ -94,6 +116,8 @@ export class Workbench {
       onUniformChange: (name, value, type) => this._applyUniform(name, value, type),
       onParamChange: (nodeId, key, value) => this._applyNodeParam(nodeId, key, value),
       onUniformsChanged: () => this._onUniformsChanged(),
+      // 增删/改名 uniform 也算一步撤销
+      commit: (label, fn) => this.editor.commitGraph(label, fn),
     });
 
     // 资源
@@ -220,14 +244,46 @@ export class Workbench {
         shapeSelect,
         playBtn,
         button('截图', () => this._capture(), { variant: 'ghost' }),
+        button('载入音频', () => this._importAudio(), { variant: 'ghost', title: '选一个本地音频复制进材质并接上 iChannel0' }),
+        button('播放/暂停', () => this._toggleAudio(), { variant: 'ghost' }),
+         button('载入歌词', () => this._importLyric(), { variant: 'ghost' }),
         h('span.swb-bar__spacer'),
         h('span.swb-preview__label', { text: '速度' }),
         this.speedSlider,
         this.qualitySelect,
       ]),
-      h('div.swb-preview__stage', {}, [this.previewCanvas, this.previewError]),
+        h('div.swb-preview__stage', {}, [this.previewCanvas, this.lyrics.root, this.previewError]),
       h('div.swb-preview__foot', {}, [this.previewStats]),
     ]);
+  }
+
+  async _playAudioFile(file) {
+    this._audio?.pause();
+    const audio = new Audio(URL.createObjectURL(file));
+    audio.loop = true;
+    audio.crossOrigin = 'anonymous';
+    this._audio = audio;
+    try {
+      await audio.play();
+      await this.renderer?.attachAudio('iChannel0', audio, { fftSize: 2048, smoothing: 0.8 });
+      this.log(`已接上音频 ${file.name} → iChannel0（y=0 频谱 / y=1 波形）`, 'ok');
+    } catch (error) {
+      this.log(`接音频失败：${messageOf(error)}（浏览器要求先点页面再播放）`, 'error');
+    }
+  }
+
+  _toggleAudio() {
+    if (!this._audio) return this.log('还没载入音频', 'error');
+     this.log(`音频状态：paused=${this._audio.paused} readyState=${this._audio.readyState} src=${this._audio.src}`, 'info');
+     if (this._audio.paused) {
+      this._audio.play().then(
+        () => this.log(`播放已启动（${this._audio.src.split('/').pop()}）`, 'ok'),
+        (error) => this.log(`播放被拒：${error.name} - ${error.message}`, 'error'),
+      );
+    } else {
+      this._audio.pause();
+      this.log('已暂停', 'info');
+    }
   }
 
   /** 诊断面板骨架。 */
@@ -357,10 +413,10 @@ export class Workbench {
     if (mode === 'material') {
       const preview = this._ensureMaterialPreview();
       if (!preview) return;
-      stage.replaceChildren(this.materialCanvas, this.previewError);
+       stage.replaceChildren(this.materialCanvas, this.lyrics.root, this.previewError);
       if (this._shapeSelect) this._shapeSelect.disabled = false;
     } else {
-      stage.replaceChildren(this.previewCanvas, this.previewError);
+      stage.replaceChildren(this.previewCanvas, this.lyrics.root, this.previewError);
       if (this._shapeSelect) this._shapeSelect.disabled = true;
     }
     this._startLoop();
@@ -378,6 +434,7 @@ export class Workbench {
       } catch (error) {
         this._showPreviewError(`材质预览渲染出错：${messageOf(error)}`);
       }
+       this.lyrics.update();   // ← 加这行
       const stats = this.renderer?.stats();
       if (stats) {
         this.previewStats.textContent = `iTime ${stats.time.toFixed(2)}s · 第 ${stats.frame} 帧 · Pass [${stats.passes.join(', ') || '无'}] · ${stats.size.width}×${stats.size.height}${stats.channels.length > 0 ? ` · 通道 [${stats.channels.join(', ')}]` : ''}`;
@@ -420,8 +477,9 @@ export class Workbench {
     this.graph = graph;
     this.dirty = true;
     this._markDirty();
-    // 结构变了（增删节点/连线/参数）才重编译；纯移动节点不用
-    if (meta?.reason === 'move-node') {
+    // 只动画面不动语义的操作（挪节点、拖/改分组框与注释）不用重编译，
+    // 连参数面板都不用重画 —— 不然拖一下分组框整个右侧就闪一次。
+    if (GRAPH_ONLY_VISUAL_REASONS.has(meta?.reason)) {
       this._updateStatus();
       return;
     }
@@ -445,8 +503,13 @@ export class Workbench {
    * @param {string} type
    */
   _applyUniform(name, value, type) {
-    if (!this.renderer) return;
-    this.renderer.setUniform(name, value, type);
+    const uniform = (this.graph.uniforms ?? []).find((u) => u.name === name);
+    if (!uniform) return;
+    // 和图里那份值同步（并存进撤销栈）。以前只塞给 renderer：
+    // 值不会随存盘落盘，撤销一次还会被上一步快照悄悄带回旧值。
+    if (this.editor && this.editor.graph === this.graph) this.editor.setUniformValue(name, value);
+    else uniform.value = value;
+    this.renderer?.setUniform(name, value, type);
     this.dirty = true;
     this._markDirty();
     this._updateStatus();
@@ -461,12 +524,42 @@ export class Workbench {
   _applyNodeParam(nodeId, key, value) {
     const node = this.graph.nodes.find((n) => n.id === nodeId);
     if (!node) return;
-    node.params = { ...node.params, [key]: value };
+    // 走编辑器的 setParam：参数改动也进撤销栈。
+    // silent —— 否则 editor 会 emit → 这里 params.render() → 正在拖的滑杆被换掉，手感直接断。
+    if (this.editor && this.editor.graph === this.graph) this.editor.setParam(nodeId, key, value, { silent: true });
+    else node.params = { ...node.params, [key]: value };
     this.dirty = true;
     this._markDirty();
     // 端口类型/通道这类改动会影响生成的声明，必须整体重编译
     this.hotreload?.invalidate(this.graph, { uniforms: this._uniformValues() });
     this._updateStatus();
+  }
+
+  /**
+   * 工作台范围内的快捷键。
+   *
+   * 画布自己有 `_onKeyDown`，但焦点在参数面板的滑杆上时它收不到事件 ——
+   * 事件从聚焦元素往上冒，冒到 `this.root` 为止，正好是我们要的范围：
+   * 焦点在工作台里才响应，焦点在聊天框里不抢。
+   *
+   * @param {KeyboardEvent} e
+   */
+  _onRootKeyDown(e) {
+    // 画布已经处理过（它 preventDefault 了），别撤两次
+    if (e.defaultPrevented) return;
+    const target = e.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
+      return;
+    }
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const key = e.key.toLowerCase();
+    if (key === 'z' && !e.shiftKey) {
+      if (this.editor.undo()) e.preventDefault();
+      return;
+    }
+    if ((key === 'z' && e.shiftKey) || key === 'y') {
+      if (this.editor.redo()) e.preventDefault();
+    }
   }
 
   /** 取所有 uniform 的当前值。 */
@@ -526,6 +619,7 @@ export class Workbench {
       this._markClean();
       this._materialLabelEl.textContent = `${project} / ${material}`;
       this.log(`已打开 ${project}/${material}（${this.graph.nodes.length} 节点）`);
+      await this._loadMaterialAssets(project, material);
       this._updateStatus();
     } catch (error) {
       this.log(`打开失败：${messageOf(error)}`, 'error');
@@ -539,9 +633,9 @@ export class Workbench {
    */
   async saveMaterial(project = this.current.project, material = this.current.material) {
     if (!project || !material) {
-      const p = window.prompt('保存到项目（留空则新建）');
+      const p = window.alert('保存到项目（留空则新建）');
       if (!p) return;
-      const m = window.prompt('材质名');
+      const m = window.alert('材质名');
       if (!m) return;
       project = p.trim();
       material = m.trim();
@@ -557,7 +651,8 @@ export class Workbench {
       await this.call('material.save', { project, material, graph });
       this.current = { project, material };
       this.graph = graph;
-      this.editor.setGraph(graph, this.editor.pass);
+      // 存盘只是把 __defaults 拍平进图，不该把用户的撤销历史清掉
+      this.editor.setGraph(graph, this.editor.pass, { keepHistory: true });
       this.dirty = false;
       this._markClean();
       this._materialLabelEl.textContent = `${project} / ${material}`;
@@ -634,14 +729,14 @@ export class Workbench {
    * @param {string} slot
    */
   async importTexture(project, material, file, slot) {
-    const path = window.prompt(
+    const path = window.alert(
       `浏览器拿不到文件绝对路径。\n请填「${file.name}」在磁盘上的完整路径：`,
       `D:\\`,
     );
     if (!path) return;
     try {
-      const result = await this.call('texture.import', { project, material, sourcePath: path.trim(), slot });
-      this.log(`已导入纹理 ${result.ref.path} → ${result.ref.slot}`, 'ok');
+      const result = await this.call('asset.import', { project, material, type: 'texture', sourcePath: path.trim(), slot });
+      this.log(`已导入纹理 ${result.asset.path} → ${result.asset.slot}`, 'ok');
       await this.resources.reload();
     } catch (error) {
       this.log(`导入纹理失败：${messageOf(error)}`, 'error');
@@ -673,6 +768,116 @@ export class Workbench {
   /** 选中节点时把参数面板滚过去。 */
   _focusNode(node) {    this.params.render();
     this.log(`选中节点 ${node.id}（${node.type}）`);
+  }
+
+
+    /**
+   * 从材质里读歌词，塞进叠加层。
+   *
+   * 没绑定或文件丢了就清空歌词层——**不报错**，因为「这个材质没配歌词」
+   * 是正常状态，不是失败。
+   *
+   * @param {string} project
+   * @param {string} material
+   */
+  async _loadMaterialAssets(project, material) {
+ // 先卸载旧的
+  this._assetsDispose?.();
+  this._assetsDispose = null;
+  this._audio?.pause();
+  this._audio = null;
+  this.lyrics?.clear();
+
+  try {
+    const { resources } = await this.call('asset.list', { project, material });
+    this._assetsDispose = await bindAssets(this, {
+      project,
+      material,
+      resources,
+      apiBase: this.apiBase,
+    });
+  } catch (error) {
+    this.log(`加载资源失败：${messageOf(error)}`, 'error');
+  }
+  }
+
+    _importAudio() {
+    const input = h('input', { type: 'file', accept: 'audio/*', style: { display: 'none' } });
+    document.body.append(input);
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      // Electron 的 File 对象带 .path；浏览器里没有，那就退回让用户填
+      const sourcePath = file.path;
+      if (!sourcePath) {
+        this.log('浏览器环境拿不到文件路径，请在 Electron 面板里操作', 'error');
+        return;
+      }
+      try {
+        await this.call('asset.import', {
+          project: this.current.project,
+          material: this.current.material,
+          type: 'audio',
+          sourcePath,
+        });
+        this.log(`音频已存入 ${this.current.material}/`, 'ok');
+        await this._loadMaterialAssets(this.current.project, this.current.material);
+      } catch (error) {
+        this.log(`导入音频失败：${messageOf(error)}`, 'error');
+      }
+    });
+    input.click();
+  }
+  /**
+   * 载入歌词：读文件 → 立刻生效 → 有打开的材质就顺手存进去。
+   *
+   * 「立刻生效」和「存进材质」是两件事：前者保证用户选完文件马上能看到效果，
+   * 后者只在有打开材质时才发生。没打开材质就是纯预览，不落盘。
+   */
+  _importLyric() {
+    const input = h('input', {
+      type: 'file',
+      accept: '.lrc,.txt,text/plain',
+      style: { display: 'none' },
+    });
+    document.body.append(input);
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+
+      let text;
+      try {
+        text = await file.text();
+      } catch (error) {
+        this.log(`读歌词文件失败：${messageOf(error)}`, 'error');
+        return;
+      }
+
+      // 先让用户在预览里看到效果
+      const lines = this.lyrics.loadText(text, file.name);
+      if (lines === 0) return;
+
+      // 有打开的材质才持久化
+      if (!this.current.project || !this.current.material) {
+        this.log('没有打开的材质，歌词只在本次会话生效', 'info');
+        return;
+      }
+      try {
+        await this.call('lyric.import', {
+          project: this.current.project,
+          material: this.current.material,
+          content: text,
+        });
+        this.dirty = true;
+        this._markDirty();
+        this.log(`歌词已存进 ${this.current.material}/lyric.lrc`, 'ok');
+      } catch (error) {
+        this.log(`歌词存盘失败（已临时载入）：${messageOf(error)}`, 'error');
+      }
+    });
+    input.click();
   }
 
   // ─────────────────────── 诊断 / 状态 ───────────────────────
@@ -784,6 +989,10 @@ export class Workbench {
   /** 释放全部资源。 */
   dispose() {
     this.disposed = true;
+    this._audio?.pause();
+     this.lyrics?.dispose();
+     this._assetsDispose?.();
+this._assetsDispose = null;
     if (this._loopHandle) cancelAnimationFrame(this._loopHandle);
     this.detachMouse?.();
     this.hotreload?.dispose();

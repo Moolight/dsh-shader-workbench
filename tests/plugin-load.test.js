@@ -13,6 +13,7 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -125,7 +126,7 @@ test('按 Cordis 的方式解析配置后 apply() 必须真的跑起来（防「
   const resolved = cordisResolveConfig(plugin, { workspaceRoot: join(tempRoot, 'ws-cordis') });
   plugin.apply(ctx, resolved);
 
-  assert.equal(tools.length, 9, 'apply 没跑到底：工具没注册齐');
+  assert.equal(tools.length, 11, 'apply 没跑到底：工具没注册齐');
   assert.equal(routes.length, 1);
 
   // 空配置（patch 行里没写 config）也必须能过
@@ -149,7 +150,7 @@ test('exposeNodeLibraryTool=false 时不注册节点库工具', () => {
   });
   const result = plugin.apply(ctx, resolved);
 
-  assert.equal(tools.length, 8);
+  assert.equal(tools.length, 10);
   assert.ok(!result.registered.includes('shader_node_library'));
   assert.deepEqual(result.failed, []);
 });
@@ -169,6 +170,8 @@ test('apply() 能跑通，并注册全部工具 + 一条路由 + 一个 effect',
     'shader_graph_build',
     'shader_compile',
     'shader_export',
+    'shader_export_targets',
+    'shader_shadertoy_import',
     'shader_snapshot',
     'shader_texture_import',
   ];
@@ -247,7 +250,7 @@ test('启动诊断日志会记录 module-loaded / apply-start / apply-ok', async
   assert.equal(ok.hasTools, true);
   assert.equal(ok.hasWebServer, true);
   assert.equal(ok.route, 'ok');
-  assert.equal(ok.registered.length, 9);
+  assert.equal(ok.registered.length, 11);
 });
 
 test('单个工具注册失败不会拖垮其它工具', () => {
@@ -268,12 +271,12 @@ test('单个工具注册失败不会拖垮其它工具', () => {
 
   const result = plugin.apply(ctx, { workspaceRoot: join(tempRoot, 'ws-resilient') });
 
-  // 8 个成功、1 个失败，路由照常
-  assert.equal(result.registered.length, 8, `成功数不对：${result.registered.join(',')}`);
+  // 10 个成功、1 个失败，路由照常
+  assert.equal(result.registered.length, 10, `成功数不对：${result.registered.join(',')}`);
   assert.equal(result.failed.length, 1);
   assert.match(result.failed[0], /shader_snapshot/);
   assert.equal(result.route, 'ok', '一个工具失败不该影响路由注册');
-  assert.equal(tools.length, 8);
+  assert.equal(tools.length, 10);
   assert.equal(rejected.length, 1, '失败原因要报给 logger');
 });
 
@@ -293,7 +296,7 @@ test('路由注册失败时工具仍然可用', () => {
   };
 
   const result = plugin.apply(ctx, { workspaceRoot: join(tempRoot, 'ws-route-fail') });
-  assert.equal(result.registered.length, 9, '工具应该全部注册成功');
+  assert.equal(result.registered.length, 11, '工具应该全部注册成功');
   assert.match(result.route, /^failed: /);
 });
 
@@ -353,7 +356,7 @@ function dshToolContent(tool, args, value) {
   return content;
 }
 
-test('工具返回值过一遍宿主的 output.render + content.some 不能炸（线上 9 个工具全挂的那个坑）', async () => {
+test('工具返回值过一遍宿主的 output.render + content.some 不能炸（线上工具全挂的那个坑）', async () => {
   const { ctx, tools } = makeFakeContext();
   plugin.apply(ctx, { workspaceRoot: join(tempRoot, 'ws-content') });
 
@@ -478,7 +481,61 @@ test('shader_project / shader_material / shader_graph_build 串起来能出图',
 
   const exported = await call('shader_export', { project: 'demo', material: 'plasma' });
   assert.equal(exported.ok, true, JSON.stringify(exported));
-  assert.match(exported.shader, /void main\(\)/);
+  assert.equal(exported.target, 'glsl');
+  assert.match(exported.code, /void main\(\)/);
+
+  // 跨平台目标：HLSL / SPIR-V 也要能导出来，并且真的落到材质目录里
+  const hlsl = await call('shader_export', { project: 'demo', material: 'plasma', target: 'hlsl' });
+  assert.equal(hlsl.ok, true, JSON.stringify(hlsl));
+  assert.match(hlsl.code, /SV_Target/, 'HLSL 入口点应当带 SV_Target 语义');
+  assert.ok(existsSync(hlsl.path), 'HLSL 应当真的落盘');
+
+  const spirv = await call('shader_export', { project: 'demo', material: 'plasma', target: 'spirv' });
+  assert.equal(spirv.ok, true, JSON.stringify(spirv));
+  assert.equal(spirv.binary, true, 'spirv 目标应当是二进制');
+  assert.ok(spirv.bytes > 0, 'spirv 产物不该是空文件');
+  assert.ok(existsSync(spirv.path), 'SPIR-V 应当真的落盘');
+  assert.match(spirv.note, /spirv-val/, '必须写明这份二进制没经过官方校验器');
+
+  // 导出目标走注册机制，所以要能列出来（面板也是这么拿的）
+  const targets = await call('shader_export_targets', {});
+  assert.ok(targets.targets.some((t) => t.id === 'spirv' && t.binary === true), '注册表里应当有 spirv');
+  assert.ok(targets.targets.some((t) => t.id === 'msl' && t.extension === 'metal'), '注册表里应当有 msl');
+
+  // ── FR-10：Shadertoy 导入 ──
+  // 导入会**替换**材质图，所以拿一个新材质来试，别动 plasma
+  const created = await call('shader_material', { action: 'create', project: 'demo', name: 'fromToy' });
+  assert.equal(created.ok, true, JSON.stringify(created));
+
+  const imported = await call('shader_shadertoy_import', {
+    project: 'demo',
+    material: 'fromToy',
+    source: [
+      'float wave(vec2 p, float t) { return sin(p.x * 10.0 + t) * 0.5 + 0.5; }',
+      'void mainImage(out vec4 fragColor, in vec2 fragCoord) {',
+      '  vec2 uv = fragCoord / iResolution.xy;',
+      '  fragColor = vec4(vec3(uv, wave(uv, iTime)), 1.0);',
+      '}',
+    ].join('\n'),
+  });
+  assert.equal(imported.ok, true, JSON.stringify(imported));
+  assert.equal(imported.nodeType, 'shadertoyMain');
+  assert.ok(imported.userNodeTypes.includes('shadertoyMain'), '导入的节点应当进用户节点库');
+  assert.ok(existsSync(join(tempRoot, 'ws5', 'library', 'nodes', 'shadertoyMain.json')), '节点定义应当落到 library/nodes');
+
+  // 换完图要能真的编译出来，而不是"看着导入成功了"
+  const toy = await call('shader_compile', { project: 'demo', material: 'fromToy' });
+  assert.equal(toy.ok, true, JSON.stringify(toy.errors));
+  assert.match(toy.code, /st_shadertoyMain\(gl_FragCoord\.xy\)/);
+
+  // 源码不对时返回 ok:false + 人话，而不是抛
+  const badImport = await call('shader_shadertoy_import', {
+    project: 'demo',
+    material: 'fromToy',
+    source: 'void main() { gl_FragColor = vec4(1.0); }',
+  });
+  assert.equal(badImport.ok, false);
+  assert.match(badImport.error, /找不到 mainImage/);
 });
 
 test('工具在参数缺失时返回 ok:false 而不是抛错', async () => {

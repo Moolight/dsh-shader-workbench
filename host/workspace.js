@@ -21,6 +21,8 @@ import { existsSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { GRAPH_FILE, MATERIAL_FILE, TEXTURE_DIR, normalizeManifest, normalizeTextureRef } from '../shared/manifest.js';
+import { normalizeAsset } from '../shared/asset-types.js';
+import { importAsset } from './asset-loader.js';
 import { makeGraph, normalizeGraph } from '../shared/graph.js';
 
 /** 允许导入的纹理扩展名。 */
@@ -350,12 +352,11 @@ export class Workspace {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const manifest = await this.readJson(join(dir, entry.name, MATERIAL_FILE));
-      const textures = await this.listTextureFiles(join(dir, entry.name));
       out.push({
         name: entry.name,
         title: manifest?.name ?? entry.name,
         tags: Array.isArray(manifest?.tags) ? manifest.tags : [],
-        textures,
+        resourceCount: Array.isArray(manifest?.resources) ? manifest.resources.length : 0,
         updatedAt: typeof manifest?.updatedAt === 'string' ? manifest.updatedAt : undefined,
       });
     }
@@ -605,49 +606,23 @@ export class Workspace {
     const slot = String(input.slot ?? 'iChannel0');
     if (!/^iChannel[0-3]$/.test(slot)) throw new Error(`非法通道槽位：${slot}`);
 
-    const sourceRaw = String(input.sourcePath ?? '');
-    if (sourceRaw === '') throw new Error('必须给 sourcePath');
-    const source = resolve(sourceRaw.startsWith('file://') ? new URL(sourceRaw).pathname : sourceRaw);
-    if (!existsSync(source)) throw new Error(`源文件不存在：${source}`);
-    const info = await stat(source);
-    if (!info.isFile()) throw new Error(`源路径不是文件：${source}`);
-    const ext = extname(source).toLowerCase();
-    if (!TEXTURE_EXTENSIONS.includes(ext)) {
-      throw new Error(`不支持的纹理格式 ${ext}；支持：${TEXTURE_EXTENSIONS.join(' ')}`);
-    }
-
-    const dir = this.materialDir(p, m);
-    if (!existsSync(dir)) throw new Error(`材质不存在：${p}/${m}`);
-    const texDir = await this.ensureDir(DIRS.projects, p, DIRS.materials, m, TEXTURE_DIR);
-
-    // 同名时加序号，不覆盖已有文件
-    const base = basename(source, ext).replace(/[^A-Za-z0-9_.-]/g, '_') || 'texture';
-    let fileName = `${base}${ext}`;
-    let counter = 1;
-    while (existsSync(join(texDir, fileName))) {
-      fileName = `${base}_${counter}${ext}`;
-      counter += 1;
-      if (counter > 999) throw new Error('同名纹理太多，换个名字');
-    }
-    await copyFile(source, join(texDir, fileName));
-
-    const ref = normalizeTextureRef({
+    // 统一走资源注册表：文件落 `textures/`、引用进 `manifest.resources[]`。
+    // 旧实现写 `manifest.textures`，而那个字段已被 normalizeManifest 移除 ——
+    // 归一化后的对象上没有 `textures`，`manifest.textures.filter` 必崩。
+    const { asset, filePath, manifest } = await importAsset(this, {
+      project: p,
+      material: m,
+      type: 'texture',
+      sourcePath: input.sourcePath,
       slot,
-      path: `${TEXTURE_DIR}/${fileName}`,
-      type: ext === '.dds' || ext === '.ktx' || ext === '.ktx2' ? 'dds' : 'image',
-      source: input.source === 'comfyui' ? 'comfyui' : 'local',
       label: typeof input.label === 'string' ? input.label : undefined,
-      importedAt: new Date().toISOString(),
+      meta: {
+        source: input.source === 'comfyui' ? 'comfyui' : 'local',
+        importedAt: new Date().toISOString(),
+      },
     });
 
-    // 写回清单：同一个槽位只保留最新一条
-    const manifestPath = join(dir, MATERIAL_FILE);
-    const manifest = normalizeManifest((await this.readJson(manifestPath)) ?? { name: m });
-    manifest.textures = [...manifest.textures.filter((t) => t.slot !== slot), ref];
-    manifest.updatedAt = new Date().toISOString();
-    await this.write(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
-    return { ok: true, ref, filePath: this.rel(join(texDir, fileName)), manifest };
+    return { ok: true, ref: asset, filePath, manifest };
   }
 
   /**
@@ -663,11 +638,12 @@ export class Workspace {
     const dir = this.materialDir(p, m);
     const manifestPath = join(dir, MATERIAL_FILE);
     const manifest = normalizeManifest((await this.readJson(manifestPath)) ?? { name: m });
-    const before = manifest.textures.length;
-    manifest.textures = manifest.textures.filter((t) => t.slot !== slot);
+    const resources = manifest.resources ?? [];
+    const next = resources.filter((r) => !(r.type === 'texture' && r.slot === slot));
+    manifest.resources = next;
     manifest.updatedAt = new Date().toISOString();
     await this.write(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    return { ok: true, removed: before - manifest.textures.length, manifest };
+    return { ok: true, removed: resources.length - next.length, manifest };
   }
 
   /**
@@ -683,6 +659,218 @@ export class Workspace {
     return this.path(DIRS.projects, project, DIRS.materials, material, rel);
   }
 
+
+
+   // ─────────────────────── 音频 ───────────────────────
+
+  /** 支持的音频扩展名。 */
+  static AUDIO_EXTENSIONS = /\.(mp3|flac|wav|ogg|m4a|aac|opus)$/i;
+
+  /**
+   * 找材质里绑定的音频文件。
+   *
+   * 返回的是**相对材质目录的路径**（比如 `world.execute(me).flac`），
+   * 面板 / asset-binder 拿到之后拼 `/plugins/<id>/asset?id=<资源id>` 给 `<audio>` 用。
+   * 音频文件几十兆，**不能走 JSON body**，必须流式。
+   *
+   * 优先级：`resources[]` 里登记的 audio 资源 → 扫材质根目录兜底。
+   *
+   * @param {string} project
+   * @param {string} material
+   * @returns {Promise<{ audio: string|null }>}
+   */
+  async readAudio(project, material) {
+    const p = assertSafeRelPath(project, '项目名');
+    const m = assertSafeName(material, '材质名');
+    const dir = this.materialDir(p, m);
+    if (!existsSync(dir)) throw new Error(`材质不存在：${p}/${m}`);
+
+    const manifest = normalizeManifest((await this.readJson(join(dir, MATERIAL_FILE))) ?? { name: m });
+    const registered = (manifest.resources ?? []).find(
+      (r) => r.type === 'audio' && existsSync(join(dir, r.path)),
+    );
+    if (registered) return { audio: registered.path };
+
+    const fileName = await this._discoverFile(dir, {
+      preferred: [/^(audio|music|song)\.(mp3|flac|wav|ogg|m4a|aac|opus)$/i],
+      accepted: Workspace.AUDIO_EXTENSIONS,
+    });
+    return { audio: fileName ?? null };
+  }
+
+  /**
+   * 解析音频文件的绝对路径（给 webServer 送字节流用）。
+   * @param {string} project
+   * @param {string} material
+   * @param {string} relPath
+   * @returns {string}
+   */
+  audioAbsolutePath(project, material, relPath) {
+    const rel = String(relPath ?? '').replaceAll('\\', '/');
+    if (rel === '' || rel.includes('..') || isAbsolute(rel)) throw new Error(`非法音频路径：${relPath}`);
+    if (!Workspace.AUDIO_EXTENSIONS.test(rel)) throw new Error(`不是音频文件：${relPath}`);
+    return this.path(DIRS.projects, project, DIRS.materials, material, rel);
+  }
+
+  async importAudio(input = {}) {
+    const p = assertSafeRelPath(input.project, '项目名');
+    const m = assertSafeName(input.material, '材质名');
+
+    // 统一走资源注册表：文件落材质根目录、引用进 `manifest.resources[]`。
+    // 旧实现写顶层 `manifest.audio`，还用了没 import 的 `statSync` —— 必崩。
+    const { asset, manifest } = await importAsset(this, {
+      project: p,
+      material: m,
+      type: 'audio',
+      sourcePath: input.sourcePath,
+      slot: input.slot,
+      label: typeof input.label === 'string' ? input.label : undefined,
+    });
+
+    return { ok: true, audio: asset.path, asset, manifest };
+  }
+
+  async clearAudio(input = {}) {
+    const p = assertSafeRelPath(input.project, '项目名');
+    const m = assertSafeName(input.material, '材质名');
+    const manifestPath = join(this.materialDir(p, m), MATERIAL_FILE);
+    const manifest = normalizeManifest((await this.readJson(manifestPath)) ?? { name: m });
+    const resources = manifest.resources ?? [];
+    const removed = resources.filter((r) => r.type === 'audio');
+    manifest.resources = resources.filter((r) => r.type !== 'audio');
+    manifest.updatedAt = new Date().toISOString();
+    await this.write(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    return { ok: true, cleared: removed[0]?.path ?? null, manifest };
+  }
+
+
+ // ─────────────────────── 歌词 ───────────────────────
+
+  /**
+   * 把一段歌词正文写进材质目录，并登记到清单里。
+   *
+   * 用固定文件名 `lyric.lrc`，所以重复导入就是替换，不会越攒越多。
+   * 遵循「永不删文件」的约定：清空引用走 `clearLyric()`，不在这里动文件。
+   *
+   * @param {object} input { project, material, content }
+   * @returns {Promise<object>}
+   */
+  async importLyric(input = {}) {
+    const p = assertSafeRelPath(input.project, '项目名');
+    const m = assertSafeName(input.material, '材质名');
+    const dir = this.materialDir(p, m);
+    if (!existsSync(dir)) throw new Error(`材质不存在：${p}/${m}`);
+
+    const content = typeof input.content === 'string' ? input.content : '';
+    if (content.trim() === '') throw new Error('歌词内容是空的');
+
+    const fileName = 'lyric.lrc';
+    await this.write(join(dir, fileName), content);
+
+    // 登记进 resources[]（歌词是单例：同类型只留一份）。
+    // 旧实现写顶层 `manifest.lyric`，那个字段已被 normalizeManifest 移除。
+    const manifestPath = join(dir, MATERIAL_FILE);
+    const manifest = normalizeManifest((await this.readJson(manifestPath)) ?? { name: m });
+    const kept = (manifest.resources ?? []).filter((r) => r.type !== 'lyric');
+    const asset = normalizeAsset({
+      type: 'lyric',
+      path: fileName,
+      label: typeof input.label === 'string' ? input.label : undefined,
+    });
+    manifest.resources = asset ? [...kept, asset] : kept;
+    manifest.updatedAt = new Date().toISOString();
+    await this.write(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    return { ok: true, lyric: fileName, asset, bytes: content.length, manifest };
+  }
+
+/**
+   * 读材质里绑定的歌词。
+   *
+   * **不用先登记**——文件即事实来源：
+   *   1. manifest 里显式指定了 `lyric` 就用它（用于同名文件有多个时指定）
+   *   2. 否则扫材质目录，找 `lyric.lrc` / `lyric.txt`
+   *   3. 再找不到就取目录里唯一的 `.lrc` / `.txt`
+   *
+   * 找不到就返回 `{ lyric: null }`，不抛错——"这个材质没配歌词"是正常状态。
+   *
+   * @param {string} project
+   * @param {string} material
+   * @returns {Promise<{ lyric: string|null, content: string|null }>}
+   */
+  async readLyric(project, material) {
+    const p = assertSafeRelPath(project, '项目名');
+    const m = assertSafeName(material, '材质名');
+    const dir = this.materialDir(p, m);
+    if (!existsSync(dir)) throw new Error(`材质不存在：${p}/${m}`);
+
+    const manifest = normalizeManifest((await this.readJson(join(dir, MATERIAL_FILE))) ?? { name: m });
+    // 1) 清单里登记的 lyric 资源（resources[] 是权威）
+    const registered = (manifest.resources ?? []).find(
+      (r) => r.type === 'lyric' && existsSync(join(dir, r.path)),
+    );
+    // 2) 兜底：文件即事实来源，扫材质根目录
+    const fileName = registered?.path ?? (await this._discoverFile(dir, {
+      preferred: [/^lyric\.(lrc|txt)$/i],
+      accepted: /\.(lrc|txt)$/i,
+    }));
+
+    if (!fileName) return { lyric: null, content: null };
+    const full = join(dir, fileName);
+    if (!existsSync(full)) return { lyric: null, content: null };
+    return { lyric: fileName, content: await readFile(full, 'utf8') };
+  }
+
+  /**
+   * 在目录里找一个符合规则的文件。
+   *
+   * 规则：
+   *   - 优先匹配 `preferred` 里的固定名（`lyric.lrc` 比 `随便啥.lrc` 优先）
+   *   - 没匹配上就取 `accepted` 里的全部候选
+   *   - 候选唯一 → 用它；多个 → 按文件名排序取第一个
+   *     （目录里堆了多个歌词文件本身就是少见情况，取第一个足够，
+   *      真要指定就用 manifest 的 `lyric` 字段）
+   *
+   * @param {string} dir
+   * @param {object} rules
+   * @param {RegExp[]} rules.preferred
+   * @param {RegExp} rules.accepted
+   * @returns {Promise<string|null>}
+   */
+  async _discoverFile(dir, { preferred = [], accepted }) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+    const files = entries.filter((e) => e.isFile()).map((e) => e.name);
+    for (const re of preferred) {
+      const hit = files.find((n) => re.test(n));
+      if (hit) return hit;
+    }
+    const candidates = files.filter((n) => accepted.test(n)).sort();
+    return candidates[0] ?? null;
+  }
+  /**
+   * 解绑歌词：只从清单里摘掉引用，**不删文件**。
+   * 用户后悔了还能在磁盘上把 lyric.lrc 找回来。
+   *
+   * @param {object} input { project, material }
+   * @returns {Promise<object>}
+   */
+  async clearLyric(input = {}) {
+    const p = assertSafeRelPath(input.project, '项目名');
+    const m = assertSafeName(input.material, '材质名');
+    const manifestPath = join(this.materialDir(p, m), MATERIAL_FILE);
+    const manifest = normalizeManifest((await this.readJson(manifestPath)) ?? { name: m });
+    const resources = manifest.resources ?? [];
+    const removed = resources.filter((r) => r.type === 'lyric');
+    manifest.resources = resources.filter((r) => r.type !== 'lyric');
+    manifest.updatedAt = new Date().toISOString();
+    await this.write(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    return { ok: true, cleared: removed[0]?.path ?? null, manifest };
+  }
   // ─────────────────────── 预设 / 库 ───────────────────────
 
   /**
@@ -781,6 +969,54 @@ export class Workspace {
   async writeCompiled(key, code) {
     const name = `${assertSafeName(key, '缓存名')}.frag`;
     return this.write(this.path(DIRS.cache, DIRS.compiled, name), code);
+  }
+
+  /**
+   * 写一个用户节点定义到 `library/nodes/<type>.json`。
+   *
+   * 用户节点是**工作区级**的（所有项目共享），所以不进材质目录 ——
+   * 从 Shadertoy 导入的代码就是靠这一步变成可用的节点类型。
+   *
+   * @param {string} type 节点类型名
+   * @param {object} definition 节点定义（JSON 形状，字段与内置节点一一对应）
+   * @returns {Promise<string>} 写出的完整路径
+   */
+  async writeUserNode(type, definition) {
+    const name = assertSafeName(type, '节点名');
+    return this.write(
+      this.path(DIRS.library, DIRS.nodes, `${name}.json`),
+      `${JSON.stringify(definition, null, 2)}\n`,
+    );
+  }
+
+  /**
+   * 递归列出材质目录下的全部文件（给「导出 ZIP」用）。
+   *
+   * @param {string} project
+   * @param {string} material
+   * @returns {Promise<Array<{rel:string, full:string}>>} `rel` 相对材质目录、用 `/` 分隔
+   */
+  async listMaterialFiles(project, material) {
+    const root = this.materialDir(project, material);
+    const out = [];
+    const walk = async (dir, prefix) => {
+      let entries;
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return; // 目录不存在就当空
+      }
+      for (const entry of entries) {
+        const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) await walk(full, rel);
+        else if (entry.isFile()) out.push({ rel, full });
+      }
+    };
+    await walk(root, '');
+    // 固定顺序，让同样的材质产出逐字节相同的 zip（测试可以直接比字节）
+    out.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+    return out;
   }
 
   /**

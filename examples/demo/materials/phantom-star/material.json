@@ -6,7 +6,7 @@
     "frag": "phantom-star.frag"
   },
   "uniforms": {},
-  "textures": [],
+  "resources": [],
   "passes": [
     "image"
   ],

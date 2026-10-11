@@ -20,11 +20,16 @@ import { readFile } from 'node:fs/promises';
 import { existsSync, statSync } from 'node:fs';
 import { extname, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { createReadStream } from 'node:fs';
 import { compileGraph } from '../client/runtime/codegen.js';
+import { crossCompile, listExportTargets } from '../shared/cross-compile.js';
+import { importShadertoy } from '../shared/shadertoy-import.js';
+import { createZip } from '../shared/zip.js';
+import { GRAPH_FILE } from '../shared/manifest.js';
+import { DIRS } from './workspace.js';
 import { listExamples, loadExample } from './examples.js';
 import { nodeLibraryStatus, reloadBuiltinNodes, syncUserNodes } from './node-library.js';
-
+import { listAssets, importAsset, removeAsset, assetAbsolutePath } from './asset-loader.js';
 /** 插件 id，也是路由前缀。 */
 export const PLUGIN_ID = 'dsh-shader-workbench';
 /** API 前缀（**带**尾随斜杠），处理器内部按它切路径。 */
@@ -196,6 +201,23 @@ function parseQuery(url) {
  * @type {Record<string, (args:object, ctx:object) => Promise<any>>}
  */
 export const ACTIONS = {
+
+  'asset.list': async (args, { workspace }) =>
+  listAssets(workspace, { project: args.project, material: args.material }),
+
+'asset.import': async (args, { workspace }) =>
+  importAsset(workspace, {
+    project: args.project,
+    material: args.material,
+    type: args.type,
+    sourcePath: args.sourcePath,
+    slot: args.slot,
+    label: args.label,
+  }),
+
+'asset.remove': async (args, { workspace }) =>
+  removeAsset(workspace, { project: args.project, material: args.material, id: args.id }),
+
   /** 工作区概览：项目列表、材质数、库计数。 */
   'workspace.overview': async (_args, { workspace }) => workspace.overview(),
 
@@ -219,6 +241,21 @@ export const ACTIONS = {
   /** 读材质（清单 + 图 + 纹理）。 */
   'material.read': async (args, { workspace }) => workspace.readMaterial(args.project, args.material),
 
+  /** 读材质里绑定的音频文件名（扫目录）。 */
+  'audio.read': async (args, { workspace }) => workspace.readAudio(args.project, args.material),
+
+  /**
+   * 导入音频：把磁盘上的音频文件复制进材质目录。
+   *
+   * 这里走 **sourcePath**（和 `texture.import` 一样）而不是 base64 上传，
+   * 因为音频动辄几十兆，走 JSON body 会撞 256KB 上限。
+   * 桌面应用下浏览器拿不到文件绝对路径，所以让用户填路径是合理的取舍。
+   */
+  'audio.import': async (args, { workspace }) => workspace.importAudio(args),
+
+  /** 解绑（不删文件）。 */
+  'audio.clear': async (args, { workspace }) => workspace.clearAudio(args),
+
   /** 存材质（图 / 清单）。 */
   'material.save': async (args, { workspace }) => {
     const result = await workspace.saveMaterial(args);
@@ -234,9 +271,161 @@ export const ACTIONS = {
     return result;
   },
 
+  /**
+   * 导出材质：把某个 pass 编译出来，再转译成目标格式，写进材质目录。
+   *
+   * 二进制目标（`.spv`）额外带一份 base64，面板才能触发下载。
+   */
+  'material.export': async (args, { workspace }) => {
+    const material = await workspace.readMaterial(args.project, args.material);
+    const passName = args.pass ?? 'image';
+    const targetId = args.target ?? 'glsl';
+    const target = listExportTargets().find((t) => t.id === targetId);
+    if (!target) throw new Error(`不认识的导出目标：${targetId}`);
+
+    const compiled = compileGraph(material.graph, passName, { uniforms: args.uniforms ?? {} });
+    if (!compiled.ok) {
+      throw new Error(`图还没编译通过：${compiled.errors.map((e) => e.message).join('；')}`);
+    }
+    const converted = crossCompile(compiled.code, targetId, {
+      source: `${args.project}/${args.material}::${passName}`,
+    });
+    if (!converted.ok) {
+      throw new Error(converted.errors.map((e) => e.message).join('；'));
+    }
+
+    const fileName = targetId === 'glsl'
+      ? (material.manifest.shaderFiles?.frag || 'shader.frag')
+      : `${args.material}.${passName}.${target.extension}`;
+    const path = await workspace.write(
+      workspace.materialFile(args.project, args.material, fileName),
+      converted.code,
+    );
+
+    const out = {
+      target: targetId, label: target.label, path, fileName, binary: target.binary, warnings: converted.warnings,
+    };
+    if (target.binary) {
+      out.bytes = converted.code.byteLength;
+      out.data = Buffer.from(converted.code).toString('base64');
+      out.note = 'SPIR-V 只做过结构自洽校验，没有经过 spirv-val。上真机前请自己验一遍。';
+    } else {
+      out.code = converted.code;
+    }
+    return out;
+  },
+
+  /** 列出可用的导出目标（注册表可扩展，面板不该写死）。 */
+  'material.exportTargets': async () => ({
+    targets: listExportTargets().map((t) => ({ id: t.id, label: t.label, extension: t.extension, binary: t.binary })),
+  }),
+
+  /**
+   * 从 Shadertoy 源码导入。
+   *
+   * 两件事一起做：
+   *   1. 把包装好的 GLSL 落成**用户节点**（`library/nodes/<type>.json`），
+   *      于是它变成一个可复用的节点类型，别的材质也能拖出来用；
+   *   2. 把目标材质的图**换成**导入产出的那张图（Shadertoy 节点 + output 终止节点）。
+   *
+   * 换图是覆盖式的 —— 所以这里返回旧图不算数，要回滚请用材质快照。
+   */
+  'material.importShadertoy': async (args, { workspace }) => {
+    const imported = importShadertoy(args.source, {
+      name: args.material,
+      ...(args.nodeType ? { nodeType: args.nodeType } : {}),
+      ...(args.sourceUrl ? { sourceUrl: args.sourceUrl } : {}),
+    });
+
+    const nodePath = await workspace.writeUserNode(imported.node.type, imported.node);
+    await workspace.saveMaterial({
+      project: args.project,
+      material: args.material,
+      graph: imported.graph,
+      ...(args.manifest ? { manifest: args.manifest } : {}),
+    });
+
+    // 节点文件刚落地，签名变了；强制重扫一次，好让返回的库计数是**导入后**的
+    let library = null;
+    try {
+      syncUserNodes(workspace, { force: true });
+      library = nodeLibraryStatus(workspace);
+    } catch {
+      // 库扫描失败不影响导入本身
+    }
+
+    return {
+      ok: true,
+      nodeType: imported.node.type,
+      nodePath: workspace.rel(nodePath),
+      nodeFile: `${imported.node.type}.json`,
+      features: imported.features,
+      warnings: imported.warnings,
+      shaderNodeId: imported.shaderNodeId,
+      outputNodeId: imported.outputNodeId,
+      nodeCount: imported.graph.nodes.length,
+      edgeCount: imported.graph.edges.length,
+      ...(library ? { userNodeTypes: library.user, userDefs: library.userDefs } : {}),
+    };
+  },
+
+  /**
+   * 把整个材质目录打包成 ZIP（store 模式，零依赖）。
+   *
+   * 返回 base64 —— 面板那侧收到后直接 Blob 下载。同时也落一份到材质目录旁边，
+   * 这样命令行/工具链也能直接拿到文件。
+   */
+  'material.exportZip': async (args, { workspace }) => {
+    const material = await workspace.readMaterial(args.project, args.material);
+    const files = await workspace.listMaterialFiles(args.project, args.material);
+    if (files.length === 0) throw new Error(`材质目录是空的：${args.project}/${args.material}`);
+
+    const stamp = new Date().toISOString();
+    const entries = [
+      {
+        name: '说明.txt',
+        data: [
+          `材质：${args.material}`,
+          `项目：${args.project}`,
+          `导出时间：${stamp}`,
+          `条目数：${files.length}`,
+          '',
+          '本包由 dsh-shader-workbench 的「导出 ZIP」生成，store 模式（未压缩）。',
+          `graph.json 是节点图，${material.manifest?.shaderFiles?.frag ?? 'shader.frag'} 是编译出的 GLSL。`,
+          '',
+        ].join('\n'),
+      },
+      ...(await Promise.all(files.map(async (file) => ({
+        name: `${args.material}/${file.rel}`,
+        data: await readFile(file.full),
+      })))),
+    ];
+
+    const zip = createZip(entries);
+    const fileName = `${args.material}.zip`;
+    // 落盘一份：写不进去（只读工作区）也不该让下载失败，所以单独 try
+    let path = null;
+    try {
+      path = await workspace.write(workspace.materialFile(args.project, args.material, fileName), zip);
+    } catch {
+      path = null;
+    }
+
+    return {
+      name: fileName,
+      fileName,
+      path: path ? workspace.rel(path) : null,
+      bytes: zip.byteLength,
+      fileCount: entries.length,
+      materialFileCount: files.length,
+      entries: entries.map((e) => e.name),
+      data: Buffer.from(zip).toString('base64'),
+      note: 'store 模式（不压缩），零依赖自研打包器；文件名走 UTF-8，中文不会乱码。',
+    };
+  },
+
   /** 打快照。 */
   'material.snapshot': async (args, { workspace }) => workspace.snapshot(args),
-
   /** 列快照。 */
   'material.snapshots': async (args, { workspace }) => ({
     snapshots: await workspace.listSnapshots(args),
@@ -253,6 +442,19 @@ export const ACTIONS = {
 
   /** 解绑槽位（不删文件）。 */
   'texture.unbind': async (args, { workspace }) => workspace.unbindTexture(args),
+
+ /** 把一段歌词正文存进材质，并登记到清单里。 */
+  'lyric.import': async (args, { workspace }) => workspace.importLyric({
+    project: args.project,
+    material: args.material,
+    content: typeof args.content === 'string' ? args.content : '',
+  }),
+
+  /** 读材质里绑定的歌词（打开材质时自动调这个）。 */
+  'lyric.read': async (args, { workspace }) => workspace.readLyric(args.project, args.material),
+
+  /** 解绑歌词（不删文件）。 */
+  'lyric.clear': async (args, { workspace }) => workspace.clearLyric(args),
 
   /** 只做代码生成，不落盘。给「查看生成代码」用。 */
   'shader.compile': async (args) => {
@@ -367,6 +569,127 @@ function safeRoot(getWorkspace) {
   } catch (error) {
     return `<不可用：${error instanceof Error ? error.message : String(error)}>`;
   }
+}
+
+
+/**
+ * 送一个资源文件。
+ *
+ * URL 用 id 而不是 path —— host 侧查 manifest 反查实际路径和 MIME，
+ * 客户端拿不到路径也删不掉文件。支持 Range，音频拖动进度条需要。
+ */
+async function handleAsset({ req, res, ctx, query }) {
+  const { project, material, id } = query;
+  if (!project || !material || !id) return fail(res, 400, '缺 project / material / id 参数');
+
+  const { resources } = await listAssets(ctx.workspace, { project, material });
+  const asset = resources.find((r) => r.id === id);
+  if (!asset) return fail(res, 404, `资源不存在：${id}`, 'not-found');
+
+  let full;
+  try {
+    full = assetAbsolutePath(ctx.workspace, { project, material, asset });
+  } catch (error) {
+    return fail(res, 400, error.message, 'bad-path');
+  }
+  if (!existsSync(full) || !statSync(full).isFile()) {
+    return fail(res, 404, `文件不存在：${asset.path}`, 'not-found');
+  }
+
+  const ext = extname(full).toLowerCase();
+  const mime = {
+    '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.opus': 'audio/opus',
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp', '.bmp': 'image/bmp', '.gif': 'image/gif',
+    '.hdr': 'image/vnd.radiance',
+    '.txt': 'text/plain; charset=utf-8',
+    '.lrc': 'text/plain; charset=utf-8',
+  }[ext] ?? 'application/octet-stream';
+
+  const info = statSync(full);
+  const range = req.headers.range;
+
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (!m) return fail(res, 416, 'Range 头格式不对', 'bad-range');
+    const start = m[1] === '' ? Math.max(0, info.size - Number(m[2])) : Number(m[1]);
+    const end = m[2] === '' ? info.size - 1 : Math.min(Number(m[2]), info.size - 1);
+    if (start > end || start >= info.size) {
+      head(res, 416, { 'content-range': `bytes */${info.size}` });
+      return res.end();
+    }
+    head(res, 206, {
+      'content-type': mime,
+      'content-length': String(end - start + 1),
+      'content-range': `bytes ${start}-${end}/${info.size}`,
+      'accept-ranges': 'bytes',
+      'cache-control': 'private, max-age=300',
+    });
+    createReadStream(full, { start, end }).pipe(res);
+    return;
+  }
+
+  head(res, 200, {
+    'content-type': mime,
+    'content-length': String(info.size),
+    'accept-ranges': 'bytes',
+    'cache-control': 'private, max-age=300',
+  });
+  createReadStream(full).pipe(res);
+}
+
+/**
+ * 送一个音频文件。
+ *
+ * 支持 Range 请求（`<audio>` 拖动进度条会用到）。
+ */
+async function handleAudio({ req, res, ctx, query }) {
+  const { project, material, path } = query;
+  if (!project || !material || !path) return fail(res, 400, '缺 project / material / path 参数');
+  let full;
+  try {
+    full = ctx.workspace.audioAbsolutePath(project, material, path);
+  } catch (error) {
+    return fail(res, 400, error instanceof Error ? error.message : String(error), 'bad-path');
+  }
+  if (!existsSync(full) || !statSync(full).isFile()) return fail(res, 404, `音频不存在：${path}`, 'not-found');
+
+  const info = statSync(full);
+  const mime = {
+    '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.opus': 'audio/opus',
+  }[extname(full).toLowerCase()] ?? 'application/octet-stream';
+
+  const range = req.headers.range;
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (!m) return fail(res, 416, 'Range 头格式不对', 'bad-range');
+    const start = m[1] === '' ? Math.max(0, info.size - Number(m[2])) : Number(m[1]);
+    const end = m[2] === '' ? info.size - 1 : Math.min(Number(m[2]), info.size - 1);
+    if (start > end || start >= info.size) {
+      head(res, 416, { 'content-range': `bytes */${info.size}` });
+      return res.end();
+    }
+    const stream = createReadStream(full, { start, end });
+    head(res, 206, {
+      'content-type': mime,
+      'content-length': String(end - start + 1),
+      'content-range': `bytes ${start}-${end}/${info.size}`,
+      'accept-ranges': 'bytes',
+      'cache-control': 'private, max-age=300',
+    });
+    stream.pipe(res);
+    return;
+  }
+
+  head(res, 200, {
+    'content-type': mime,
+    'content-length': String(info.size),
+    'accept-ranges': 'bytes',
+    'cache-control': 'private, max-age=300',
+  });
+  createReadStream(full).pipe(res);
 }
 
 /**
@@ -496,7 +819,10 @@ export function createRoute({ getWorkspace, version = '0.1.0', settings = undefi
       try {
         const url = req.url ?? '/';
         const pathname = url.split('?')[0];
-
+        if (pathname === `${API_PREFIX}asset`) {
+  if (req.method !== 'GET') return fail(res, 405, '只允许 GET');
+  return handleAsset({ req, res, ctx: { workspace: getWorkspace() }, query: parseQuery(url) });
+}
         if (pathname === `${API_PREFIX}ping`) {
           // ping 不碰工作区，避免为了一个存活探针去建目录
           return json(res, 200, {
@@ -534,7 +860,10 @@ export function createRoute({ getWorkspace, version = '0.1.0', settings = undefi
           if (req.method !== 'GET') return fail(res, 405, '只允许 GET');
           return handleTexture({ req, res, ctx: { workspace: getWorkspace() }, query: parseQuery(url) });
         }
-
+     if (pathname === `${API_PREFIX}audio`) {
+          if (req.method !== 'GET') return fail(res, 405, '只允许 GET');
+          return handleAudio({ req, res, ctx: { workspace: getWorkspace() }, query: parseQuery(url) });
+        }
         if (pathname === `${API_PREFIX}api`) {
           if (req.method !== 'POST') return fail(res, 405, '只允许 POST');
           // workspace 走 getter：`settings.write` 改完存储位置之后，

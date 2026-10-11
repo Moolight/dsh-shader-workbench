@@ -20,11 +20,11 @@
  * @module dsh-shader-workbench/tests/node-prelude
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { makeEdge, makeGraph, makeNode, setPassNodes } from '../shared/graph.js';
-import { NODE_LIBRARY, getNodeDef, nodeSourceOf, setUserNodes } from '../shared/nodes.js';
+import { NODE_LIBRARY, getNodeDef, nodeSourceOf, setUserNodes, userNodeDefs } from '../shared/nodes.js';
 import { parseUserNodeDefinition } from '../shared/user-nodes.js';
 import { compileGraph } from '../client/runtime/codegen.js';
 
@@ -61,17 +61,36 @@ const PROBE = parseUserNodeDefinition(
   'loopProbe.json',
 );
 
-// ⚠️ 必须在 before 里注册，不能在模块顶层：run-tests.mjs 是**同一个进程顺序 import**
-// 所有测试文件（沙箱下带管道的 spawn 会被拒），模块级副作用会漏给后面的文件，
-// 把 node-registry.test.js 的节点计数断言带崩。踩过。
-before(() => {
+/**
+ * 装上探针节点跑一段代码，跑完把注册表**还原成原样**。
+ *
+ * 为什么不用 `before()` / `after()` 钩子 —— 这里踩过两次，值得写清楚：
+ *
+ *   本仓库有**两个** runner。`node --test` 给每个测试文件派生一个进程，钩子正常；
+ *   而 `scripts/run-tests.mjs`（沙箱兜底，受限环境下 spawn 会被拒）是**同一个进程
+ *   顺序 import** 所有文件。那种跑法下，根测试在第一个文件 import 完就开始跑了，
+ *   之后文件里注册的 `before` / `after` **根本不会触发**。
+ *
+ *   后果是双重的，而且都不显眼：
+ *     - `before` 不触发 → 探针没装上 → 本文件 4 个用例全红；
+ *     - `after` 也不触发 → 探针漏给后面的 `node-registry.test.js`，
+ *       把它的节点计数断言一起带崩。
+ *
+ *   所以改成显式的「进出成对」：注册表是进程级全局，谁改谁负责还。
+ *
+ * @template T
+ * @param {() => T} fn
+ * @returns {T}
+ */
+function withProbe(fn) {
+  const saved = userNodeDefs();
   setUserNodes([PROBE]);
-});
-
-after(() => {
-  // 注册表是进程级的，测完还回去，别影响同进程跑的其它测试文件
-  setUserNodes([]);
-});
+  try {
+    return fn();
+  } finally {
+    setUserNodes(saved);
+  }
+}
 
 /**
  * 造一张图：uv / time → N 个探针节点 → output。
@@ -124,7 +143,7 @@ test('示例里不许再出现"藏 prelude 的专用节点"', () => {
   }
 });
 
-test('用户节点带着 prelude 时，定义能正常解析出来', () => {
+test('用户节点带着 prelude 时，定义能正常解析出来', () => withProbe(() => {
   const def = getNodeDef(PROBE_TYPE);
   assert.ok(def, '注册表里没有探针节点');
   assert.equal(def.userDefined, true);
@@ -136,9 +155,9 @@ test('用户节点带着 prelude 时，定义能正常解析出来', () => {
   assert.match(def.glslPrelude, /vec4 st_loopProbe\(/);
   // 表达式里不能有 for —— 生成器只会把它拼进 `vec4 x = <表达式>;`
   assert.ok(!/for\s*\(/.test(def.code), 'code 必须是单条表达式，循环要放 glslPrelude');
-});
+}));
 
-test('成图：编译通过、循环进 prelude、helper 闭包干净', () => {
+test('成图：编译通过、循环进 prelude、helper 闭包干净', () => withProbe(() => {
   const result = compileGraph(graphWithProbes(1), 'image', { uniforms: {} });
 
   assert.deepEqual(result.errors, [], `不该有错：${JSON.stringify(result.errors)}`);
@@ -157,9 +176,9 @@ test('成图：编译通过、循环进 prelude、helper 闭包干净', () => {
     result.code.indexOf('vec4 st_loopProbe(vec2') < result.code.indexOf('void main()'),
     'prelude 必须在 main() 之前',
   );
-});
+}));
 
-test('同一类型出现两个节点时，prelude 只注入一次', () => {
+test('同一类型出现两个节点时，prelude 只注入一次', () => withProbe(() => {
   const result = compileGraph(graphWithProbes(2), 'image', { uniforms: {} });
   assert.deepEqual(result.errors, []);
   assert.equal(
@@ -168,15 +187,15 @@ test('同一类型出现两个节点时，prelude 只注入一次', () => {
     '注入了两份定义 → GLSL 函数重定义，编译会炸',
   );
   assert.equal((result.code.match(/=\s*st_loopProbe\(/g) ?? []).length, 2, '两个节点应该各调用一次');
-});
+}));
 
-test('节点参数替换进调用点', () => {
+test('节点参数替换进调用点', () => withProbe(() => {
   const result = compileGraph(graphWithProbes(1, { steps: 7, gain: 5.5 }), 'image', { uniforms: {} });
   assert.deepEqual(result.errors, []);
   // 注意别匹配到 prelude 里的函数定义，要的是 main 里的调用点
   const call = result.code.match(/=\s*st_loopProbe\([^;]*;/)?.[0] ?? '';
   assert.match(call, /,\s*7,\s*5\.5\)/, `参数没替换进去：${call}`);
-});
+}));
 
 test('不用这个节点时，prelude 一个字符都不进 shader', () => {
   const uv = node('uv', 0, 0);
@@ -190,6 +209,7 @@ test('不用这个节点时，prelude 一个字符都不进 shader', () => {
 
 test('没装这个用户节点时，图会明确报「不认识的节点类型」', () => {
   // "忘了装库文件" 是用户节点唯一的失败模式，得给一句能看懂的话
+  const saved = userNodeDefs();
   setUserNodes([]);
   try {
     const result = compileGraph(graphWithProbes(1), 'image', { uniforms: {} });
@@ -199,7 +219,7 @@ test('没装这个用户节点时，图会明确报「不认识的节点类型�
       `报错没说清楚：${JSON.stringify(result.errors)}`,
     );
   } finally {
-    setUserNodes([PROBE]);
+    setUserNodes(saved);
   }
 });
 

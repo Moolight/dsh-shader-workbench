@@ -1,0 +1,164 @@
+{
+  "id": "g_fft_music_driven_v4",
+  "name": "傅里叶变换·音乐驱动 v4",
+  "version": 1,
+  "nodes": [
+    { "id": "n_uv",    "type": "uv",   "x": 0, "y": 0,   "params": {} },
+    { "id": "n_time",  "type": "time", "x": 0, "y": 200, "params": { "scale": 1 } },
+
+    { "id": "n_polar", "type": "custom", "x": 250, "y": -100, "params": {
+      "expr": "vec4(length(($in.a.xy * iResolution.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y)), atan((($in.a.xy * iResolution.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y)).y, (($in.a.xy * iResolution.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y)).x) / (2.0 * 3.14159265359) + $in.b.x * 0.10 + 0.5, $in.a.x, $in.a.y)"
+    }},
+
+    { "id": "n_ring",  "type": "custom", "x": 500, "y": -100, "params": {
+      "expr": "vec4((exp(-fract($in.c / (60.0/130.0)) * 8.0) * 0.5 + 0.5) * (vec3(0.30, 0.85, 1.00) * (exp(-abs($in.a.x - (0.14 + texture(iChannel0, vec2(fract($in.a.y + $in.c * 0.15) * 0.35, 0.0)).x * 0.75)) * 180.0) * 1.2 + exp(-abs($in.a.x - (0.14 + texture(iChannel0, vec2(fract($in.a.y + $in.c * 0.15) * 0.35, 0.0)).x * 0.75)) * 22.0) * 0.42) + vec3(0.70, 0.50, 1.00) * (exp(-abs($in.a.x - (0.38 + texture(iChannel0, vec2(fract($in.a.y * 2.0 - $in.c * 0.20) * 0.30, 0.0)).x * 0.70)) * 160.0) * 1.1 + exp(-abs($in.a.x - (0.38 + texture(iChannel0, vec2(fract($in.a.y * 2.0 - $in.c * 0.20) * 0.30, 0.0)).x * 0.70)) * 20.0) * 0.38) + vec3(1.00, 0.40, 0.85) * (exp(-abs($in.a.x - (0.62 + texture(iChannel0, vec2(fract($in.a.y * 3.0 + $in.c * 0.18) * 0.28, 0.0)).x * 0.65)) * 150.0) * 1.0 + exp(-abs($in.a.x - (0.62 + texture(iChannel0, vec2(fract($in.a.y * 3.0 + $in.c * 0.18) * 0.28, 0.0)).x * 0.65)) * 18.0) * 0.34)), 1.0)"
+    }},
+
+    { "id": "n_coeffs_lo", "type": "custom", "x": 500, "y": 200, "params": {
+      "expr": "vec4(0.35 + texture(iChannel0, vec2(0.04, 0.0)).x * 2.0, 0.28 + texture(iChannel0, vec2(0.10, 0.0)).x * 1.8, 0.22 + texture(iChannel0, vec2(0.18, 0.0)).x * 1.6, 0.18 + texture(iChannel0, vec2(0.26, 0.0)).x * 1.4)"
+    }},
+    { "id": "n_coeffs_hi", "type": "custom", "x": 500, "y": 400, "params": {
+      "expr": "vec4(0.14 + texture(iChannel0, vec2(0.34, 0.0)).x * 1.2, 0.10 + texture(iChannel0, vec2(0.44, 0.0)).x * 1.0, 0.08 + texture(iChannel0, vec2(0.54, 0.0)).x * 0.8, 0.06 + texture(iChannel0, vec2(0.66, 0.0)).x * 0.6)"
+    }},
+    { "id": "n_best_seed", "type": "custom", "x": 500, "y": 600, "params": {
+      "expr": "vec4(9.0)"
+    }},
+
+    { "id": "n_trail_loop", "type": "group", "x": 800, "y": 200, "params": {
+      "repeat": 64,
+      "graph": {
+        "name": "笔尖轨迹采样（过去 0.128 秒）",
+        "carries": ["best"],
+        "inputs": [
+          { "id": "uv", "label": "uv", "type": "vec2" },
+          { "id": "t", "label": "t", "type": "float" },
+          { "id": "c0", "label": "系数0", "type": "vec4" },
+          { "id": "c1", "label": "系数1", "type": "vec4" },
+          { "id": "best", "label": "最小距离", "type": "float" }
+        ],
+        "outputs": [
+          { "id": "best", "label": "最小距离", "type": "float" }
+        ],
+        "nodes": [
+          { "id": "gi_uv",   "type": "groupInput", "x": -500, "y": 0,   "params": { "port": "uv",   "type": "vec2" } },
+          { "id": "gi_t",    "type": "groupInput", "x": -500, "y": 120, "params": { "port": "t",    "type": "float" } },
+          { "id": "gi_c0",   "type": "groupInput", "x": -500, "y": 240, "params": { "port": "c0",   "type": "vec4" } },
+          { "id": "gi_c1",   "type": "groupInput", "x": -500, "y": 360, "params": { "port": "c1",   "type": "vec4" } },
+          { "id": "gi_best", "type": "groupInput", "x": -500, "y": 480, "params": { "port": "best", "type": "float" } },
+          { "id": "idx",     "type": "loopIndex",  "x": -500, "y": 600, "params": {} },
+
+          { "id": "t_hist",  "type": "custom", "x": -200, "y": 120, "params": {
+            "expr": "vec4($in.a.x - $in.b.x * 0.002, 0.0, 0.0, 1.0)"
+          }},
+          { "id": "tip_at",  "type": "custom", "x": 100, "y": 240, "params": {
+            "expr": "vec4(($in.a.x * vec2(cos(-6.28318 * $in.c + 1.5708), sin(-6.28318 * $in.c + 1.5708)) + $in.a.y * vec2(cos(12.56636 * $in.c - 1.5708), sin(12.56636 * $in.c - 1.5708)) + $in.a.z * vec2(cos(-18.84954 * $in.c - 1.5708), sin(-18.84954 * $in.c - 1.5708)) + $in.a.w * vec2(cos(25.13272 * $in.c + 1.5708), sin(25.13272 * $in.c + 1.5708)) + $in.b.x * vec2(cos(-31.41590 * $in.c + 1.5708), sin(-31.41590 * $in.c + 1.5708)) + $in.b.y * vec2(cos(37.69908 * $in.c - 1.5708), sin(37.69908 * $in.c - 1.5708)) + $in.b.z * vec2(cos(-43.98226 * $in.c - 1.5708), sin(-43.98226 * $in.c - 1.5708)) + $in.b.w * vec2(cos(50.26544 * $in.c + 1.5708), sin(50.26544 * $in.c + 1.5708))) * 0.30 + vec2(0.5), 0.0, 1.0)"
+          }},
+          { "id": "d",       "type": "custom", "x": 400, "y": 240, "params": {
+            "expr": "vec4(length($in.a.xy - $in.b.xy), 0.0, 0.0, 1.0)"
+          }},
+          { "id": "best_new", "type": "custom", "x": 700, "y": 360, "params": {
+            "expr": "vec4(min($in.a.x, $in.b.x), 0.0, 0.0, 1.0)"
+          }},
+          { "id": "go_best", "type": "groupOutput", "x": 1000, "y": 360, "params": { "port": "best", "type": "float" } }
+        ],
+        "edges": [
+          { "from": { "node": "gi_t",    "port": "out" }, "to": { "node": "t_hist",   "port": "a" } },
+          { "from": { "node": "idx",     "port": "out" }, "to": { "node": "t_hist",   "port": "b" } },
+          { "from": { "node": "gi_c0",   "port": "out" }, "to": { "node": "tip_at",   "port": "a" } },
+          { "from": { "node": "gi_c1",   "port": "out" }, "to": { "node": "tip_at",   "port": "b" } },
+          { "from": { "node": "t_hist",  "port": "out" }, "to": { "node": "tip_at",   "port": "c" } },
+          { "from": { "node": "gi_uv",   "port": "out" }, "to": { "node": "d",        "port": "a" } },
+          { "from": { "node": "tip_at",  "port": "out" }, "to": { "node": "d",        "port": "b" } },
+          { "from": { "node": "gi_best", "port": "out" }, "to": { "node": "best_new", "port": "a" } },
+          { "from": { "node": "d",       "port": "out" }, "to": { "node": "best_new", "port": "b" } },
+          { "from": { "node": "best_new","port": "out" }, "to": { "node": "go_best",  "port": "color" } }
+        ]
+      }
+    }},
+
+    { "id": "n_trail", "type": "custom", "x": 1150, "y": 200, "params": {
+      "expr": "vec4(vec3(1.0, 0.85, 0.45) * (0.7 + 1.2 * $in.b.x) * (smoothstep(0.006, 0.0, $in.a.x) + 0.5 * smoothstep(0.020, 0.0, $in.a.x)) + vec3(1.0, 0.55, 0.25) * smoothstep(0.045, 0.0, $in.a.x) * 0.4, 1.0)"
+    }},
+
+    { "id": "n_merge", "type": "custom", "x": 1420, "y": 100, "params": {
+      "expr": "vec4($in.a.rgb * 0.65 + $in.b.rgb * 1.45, 1.0)"
+    }},
+
+    { "id": "n_prev",  "type": "bufferSample", "x": 1420, "y": 400, "params": { "buffer": "BufferA" } },
+
+    { "id": "n_blend", "type": "custom", "x": 1680, "y": 100, "params": {
+      "expr": "vec4(max($in.a.rgb, $in.b.rgb * 0.85), 1.0)"
+    }},
+
+    { "id": "n_outA",  "type": "output", "x": 1940, "y": 100, "params": {} },
+
+    { "id": "n_uv2",     "type": "uv", "x": 0, "y": 700, "params": {} },
+    { "id": "n_audio2",  "type": "custom", "x": 250, "y": 700, "params": {
+      "expr": "vec4(texture(iChannel0, vec2(0.03, 0.0)).x, texture(iChannel0, vec2(0.12, 0.0)).x, texture(iChannel0, vec2(0.40, 0.0)).x, texture(iChannel0, vec2($in.a.x, 1.0)).x)"
+    }},
+    { "id": "n_bars2",   "type": "custom", "x": 520, "y": 700, "params": {
+      "expr": "vec4(vec3(0.45, 0.28, 0.95) * step($in.a.y, pow(texture(iChannel0, vec2(floor($in.a.x * 96.0) / 96.0, 0.0)).x, 1.4) * 0.20) * step(0.0, $in.a.y) * (0.55 + 0.45 * $in.a.y), 1.0) + vec4(vec3(0.10, 0.05, 0.25) * smoothstep(0.14, 0.0, $in.a.y), 0.0)"
+    }},
+    { "id": "n_wave2",   "type": "custom", "x": 520, "y": 900, "params": {
+      "expr": "vec4(vec3(0.85, 0.55, 0.95) * smoothstep(0.0035, 0.0, abs($in.a.y - (0.86 + $in.b.w * 0.06))) * 0.85, 1.0)"
+    }},
+    { "id": "n_show_uv", "type": "uv", "x": 0, "y": 1100, "params": {} },
+    { "id": "n_show",    "type": "bufferSample", "x": 250, "y": 1100, "params": { "buffer": "BufferA" } },
+    { "id": "n_composite2", "type": "custom", "x": 800, "y": 1000, "params": {
+      "expr": "vec4($in.a.rgb + $in.b.rgb + vec3($in.c), 1.0)"
+    }},
+    { "id": "n_tint2",   "type": "custom", "x": 1060, "y": 1000, "params": {
+      "expr": "vec4(min(vec3(1.0), vec3(dot($in.a.rgb, vec3(0.5, 0.8, 1.0)) * (0.35 + 0.4 * $in.b.y), dot($in.a.rgb, vec3(1.0, 0.4, 0.9)) * (0.35 + 0.4 * $in.b.z), dot($in.a.rgb, vec3(0.3, 0.6, 1.0)) * (0.35 + 0.4 * $in.b.x))), 1.0)"
+    }},
+    { "id": "n_output",  "type": "output", "x": 1320, "y": 1000, "params": {} }
+  ],
+  "edges": [
+    { "id": "e1",  "from": { "node": "n_uv",          "port": "out"   }, "to": { "node": "n_polar",      "port": "a" } },
+    { "id": "e2",  "from": { "node": "n_time",        "port": "out"   }, "to": { "node": "n_polar",      "port": "b" } },
+    { "id": "e3",  "from": { "node": "n_polar",       "port": "out"   }, "to": { "node": "n_ring",       "port": "a" } },
+    { "id": "e4",  "from": { "node": "n_time",        "port": "out"   }, "to": { "node": "n_ring",       "port": "c" } },
+
+    { "id": "e5",  "from": { "node": "n_uv",          "port": "out"   }, "to": { "node": "n_trail_loop", "port": "uv"   } },
+    { "id": "e6",  "from": { "node": "n_time",        "port": "out"   }, "to": { "node": "n_trail_loop", "port": "t"    } },
+    { "id": "e7",  "from": { "node": "n_coeffs_lo",   "port": "out"   }, "to": { "node": "n_trail_loop", "port": "c0"   } },
+    { "id": "e8",  "from": { "node": "n_coeffs_hi",   "port": "out"   }, "to": { "node": "n_trail_loop", "port": "c1"   } },
+    { "id": "e9",  "from": { "node": "n_best_seed",   "port": "out"   }, "to": { "node": "n_trail_loop", "port": "best" } },
+
+    { "id": "e10", "from": { "node": "n_trail_loop",  "port": "best"  }, "to": { "node": "n_trail",      "port": "a"    } },
+    { "id": "e11", "from": { "node": "n_coeffs_lo",   "port": "out"   }, "to": { "node": "n_trail",      "port": "b"    } },
+
+    { "id": "e12", "from": { "node": "n_ring",        "port": "out"   }, "to": { "node": "n_merge",      "port": "a"    } },
+    { "id": "e13", "from": { "node": "n_trail",       "port": "out"   }, "to": { "node": "n_merge",      "port": "b"    } },
+    { "id": "e14", "from": { "node": "n_uv",          "port": "out"   }, "to": { "node": "n_prev",       "port": "uv"   } },
+    { "id": "e15", "from": { "node": "n_merge",       "port": "out"   }, "to": { "node": "n_blend",      "port": "a"    } },
+    { "id": "e16", "from": { "node": "n_prev",        "port": "out"   }, "to": { "node": "n_blend",      "port": "b"    } },
+    { "id": "e17", "from": { "node": "n_blend",       "port": "out"   }, "to": { "node": "n_outA",       "port": "color"} },
+
+    { "id": "e18", "from": { "node": "n_uv2",         "port": "out"   }, "to": { "node": "n_audio2",     "port": "a" } },
+    { "id": "e19", "from": { "node": "n_uv2",         "port": "out"   }, "to": { "node": "n_bars2",      "port": "a" } },
+    { "id": "e20", "from": { "node": "n_uv2",         "port": "out"   }, "to": { "node": "n_wave2",      "port": "a" } },
+    { "id": "e21", "from": { "node": "n_audio2",      "port": "out"   }, "to": { "node": "n_wave2",      "port": "b" } },
+    { "id": "e22", "from": { "node": "n_show_uv",     "port": "out"   }, "to": { "node": "n_show",       "port": "uv"} },
+    { "id": "e23", "from": { "node": "n_show",        "port": "out"   }, "to": { "node": "n_composite2", "port": "a" } },
+    { "id": "e24", "from": { "node": "n_bars2",       "port": "out"   }, "to": { "node": "n_composite2", "port": "b" } },
+    { "id": "e25", "from": { "node": "n_wave2",       "port": "out"   }, "to": { "node": "n_composite2", "port": "c" } },
+    { "id": "e26", "from": { "node": "n_composite2",  "port": "out"   }, "to": { "node": "n_tint2",      "port": "a" } },
+    { "id": "e27", "from": { "node": "n_audio2",      "port": "out"   }, "to": { "node": "n_tint2",      "port": "b" } },
+    { "id": "e28", "from": { "node": "n_tint2",       "port": "out"   }, "to": { "node": "n_output",     "port": "color"} }
+  ],
+  "uniforms": [],
+  "passes": [
+    {
+      "name": "BufferA",
+      "graph": ["n_uv", "n_time", "n_polar", "n_ring", "n_coeffs_lo", "n_coeffs_hi", "n_best_seed", "n_trail_loop", "n_trail", "n_merge", "n_prev", "n_blend", "n_outA"]
+    },
+    {
+      "name": "image",
+      "graph": ["n_uv2", "n_audio2", "n_bars2", "n_wave2", "n_show_uv", "n_show", "n_composite2", "n_tint2", "n_output"]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "tags": ["audio", "fft", "fourier", "buffer", "music-driven"]
+  }
+}

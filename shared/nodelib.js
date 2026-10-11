@@ -36,6 +36,29 @@ const outTypePorts = (params, ports) =>
  */
 export const NODE_LIBRARY_RAW = [
   // ───────────────────────── 输入 ─────────────────────────
+  // ───────────────────────── 音频 ─────────────────────────
+defineNode({
+  type: 'audioFFT',
+  title: '音频频谱',
+  category: '音频',
+  doc: '取 FFT 某个频段的幅度（0..1）。需要先在预览栏「载入音频」把音源绑到 iChannel。',
+  inputs: [f('bin', '频段 0..1', 0.3)],
+  outputs: [f('out', '幅度')],
+  params: { channel: { type: 'select', value: 'iChannel0', options: CHANNELS, label: '通道' } },
+  code: 'AUDIO_FFT',
+  audioSample: 'spectrum',
+}),
+defineNode({
+  type: 'audioWave',
+  title: '音频波形',
+  category: '音频',
+  doc: '取波形某个采样点，值域 −1..1。',
+  inputs: [f('t', '采样点 0..1', 0.5)],
+  outputs: [f('out', '波形')],
+  params: { channel: { type: 'select', value: 'iChannel0', options: CHANNELS, label: '通道' } },
+  code: 'AUDIO_WAVE',
+  audioSample: 'wave',
+}),
   defineNode({
     type: 'uv',
     title: 'UV 坐标',

@@ -258,7 +258,21 @@ class Emitter {
       const idx = { x: 0, y: 1, z: 2, w: 3 }[portId] ?? 0;
       return `(${src.expr}).${COMPONENTS[src.type][idx] ?? 'x'}`;
     }
+  // 音频采样：iChannel 是一张 2 行纹理，y=0 频谱，y=1 波形
+    if (def.audioSample) {
+      const ch = normChannel(params.channel);
+      this.channels.add(ch);              // 必须：否则 header 不会声明 sampler2D
 
+      const port = def.audioSample === 'wave' ? 't' : 'bin';
+      const src = this.inputExpr(node, def, port);
+      const x = castExpr(src.expr, src.type, 'float');
+
+      if (def.audioSample === 'wave') {
+        // 纹理素值 0..1，波形还原到 −1..1
+        return `(texture(${ch}, vec2(clamp(${x}, 0.0, 1.0), 1.0)).x * 2.0 - 1.0)`;
+      }
+      return `texture(${ch}, vec2(clamp(${x}, 0.0, 1.0), 0.0)).x`;
+    }
     // 纹理采样
     if (def.textureSample) {
       const uv = this.inputExpr(node, def, 'uv');
@@ -830,6 +844,29 @@ export function compileGraph(graph, passName = 'image', opts = {}) {
   }
   for (const uniform of uniforms) {
     if (typeof uniform.init !== 'string' || uniform.init === '') uniform.init = uniformInitializerFor(uniform.type);
+  }
+
+  // prelude 里也可能**直接**引用 iChannel / Buffer（比如从 Shadertoy 导入的自定义节点，
+  // 它的整段代码都活在 prelude 里）。这些引用不是采样节点产生的，光靠节点扫描看不到，
+  // 但 header 必须声明它们，否则生成的 GLSL 引用未声明变量、编译直接报 syntax error。
+  for (const text of emitter.preludes.values()) {
+    for (const ch of text.match(/iChannel[0-3]/g) ?? []) emitter.channels.add(ch);
+    for (const buf of text.match(/Buffer[A-D]/g) ?? []) emitter.buffers.add(buf);
+  }
+
+ // `custom` 节点的表达式（以及任何节点模板里手写的采样）也可能直接引用
+  // iChannel / Buffer。这些引用不是 textureSample / audioSample 节点产生的，
+  // 光靠节点的 def.textureSample 分支看不到 —— 必须扫一遍原始文本。
+  // 扫的是**替换前**的模板（`def.code` 和 `params.expr`），占位符 `$in.xxx`
+  // 里不会出现通道名，所以替换与否不影响结果。
+  for (const node of sub.nodes) {
+    const def = NODE_BY_TYPE.get(node.type);
+    if (!def) continue;
+    const text = node.type === 'custom' && typeof node.params?.expr === 'string'
+      ? node.params.expr
+      : def.code;
+    for (const ch of String(text ?? '').match(/iChannel[0-3]/g) ?? []) emitter.channels.add(ch);
+    for (const buf of String(text ?? '').match(/Buffer[A-D]/g) ?? []) emitter.buffers.add(buf);
   }
 
   const header = shadertoyHeader({

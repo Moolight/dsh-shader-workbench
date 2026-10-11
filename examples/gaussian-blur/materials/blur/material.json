@@ -15,10 +15,10 @@
       "label": "模糊半径"
     }
   },
-  "textures": [],
+  "resources": [],
   "passes": [
-    "BufferA",
-    "image"
+    "image",
+    "BufferA"
   ],
   "comfyWorkflows": [],
   "tags": [],

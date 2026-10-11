@@ -31,6 +31,94 @@ export const TEXTURE_SOURCES = ['local', 'comfyui'];
 export const PORT_TYPES = ['float', 'vec2', 'vec3', 'vec4'];
 
 /**
+ * 画布上的**装饰件**类型。
+ *
+ * 这两个都只活在编辑器里，**完全不参与代码生成**：
+ *   - `frame`：分组框，画布上一块带标题的区域，拖它会把框里的节点一起带走
+ *   - `note` ：自由注释，一块带换行文本的便签
+ *
+ * 之所以放在图里（而不是编辑器内存里）：它们是图的一部分，
+ * 存盘后重开必须还在 —— 否则每次打开材质都得重画一遍说明。
+ */
+export const FRAME_KINDS = ['frame', 'note'];
+
+/** 装饰件配色名（具体色值在面板的 style/editor 里）。 */
+export const FRAME_COLORS = ['blue', 'green', 'amber', 'violet', 'rose', 'slate'];
+
+/** 单个 Pass 最多允许多少个装饰件（防止脏数据把画布塞爆）。 */
+export const MAX_FRAMES_PER_PASS = 300;
+
+/** 装饰件尺寸下限，避免被拖成 0 宽之后再也点不到。 */
+export const MIN_FRAME_SIZE = 80;
+
+/**
+ * 建一个装饰件。
+ * @param {'frame'|'note'} kind
+ * @param {number} x
+ * @param {number} y
+ * @param {object} [over] 覆盖字段：w / h / title / text / color / id
+ * @returns {object}
+ */
+export function makeFrame(kind, x, y, over = {}) {
+  const k = FRAME_KINDS.includes(kind) ? kind : 'frame';
+  return normalizeFrame({
+    id: over.id ?? makeId('f'),
+    kind: k,
+    x,
+    y,
+    w: k === 'note' ? 240 : 360,
+    h: k === 'note' ? 110 : 220,
+    title: k === 'frame' ? '分组' : '',
+    text: '',
+    color: 'blue',
+    ...over,
+  });
+}
+
+/**
+ * 归一化一个装饰件。非法输入返回 null。
+ * @param {any} raw
+ * @returns {object|null}
+ */
+export function normalizeFrame(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (!FRAME_KINDS.includes(raw.kind)) return null;
+  const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+  const size = (value, fallback) => Math.max(MIN_FRAME_SIZE, Math.min(20000, num(value, fallback)));
+  return {
+    id: typeof raw.id === 'string' && raw.id !== '' ? raw.id : makeId('f'),
+    kind: raw.kind,
+    x: Math.round(num(raw.x, 0)),
+    y: Math.round(num(raw.y, 0)),
+    w: Math.round(size(raw.w, 360)),
+    h: Math.round(size(raw.h, 220)),
+    // 文本截断：装饰件是给人看的，不需要承载无限内容
+    title: typeof raw.title === 'string' ? raw.title.slice(0, 200) : '',
+    text: typeof raw.text === 'string' ? raw.text.slice(0, 4000) : '',
+    color: FRAME_COLORS.includes(raw.color) ? raw.color : 'blue',
+  };
+}
+
+/**
+ * 归一化一个 Pass 的装饰件数组。永不抛错。
+ * @param {any} raw
+ * @returns {object[]}
+ */
+export function normalizeFrames(raw) {
+  const out = [];
+  const seen = new Set();
+  for (const item of Array.isArray(raw) ? raw : []) {
+    const frame = normalizeFrame(item);
+    if (!frame) continue;
+    if (seen.has(frame.id)) continue;
+    seen.add(frame.id);
+    out.push(frame);
+    if (out.length >= MAX_FRAMES_PER_PASS) break;
+  }
+  return out;
+}
+
+/**
  * 端口：类型 + 缺省值。缺省值就是「这个输入没接线时用什么」。
  * 生成器读 `port.def` 作为未接线时的字面量，缺省按类型给 (0 / vecN(0))。
  *
@@ -235,9 +323,11 @@ export function normalizeGraph(raw) {
   for (const name of PASS_NAMES) {
     const found = Array.isArray(src.passes) ? src.passes.find((p) => p && p.name === name) : null;
     if (name !== 'image' && !found) continue;
-    passes.push({ name, graph: found?.graph ?? null });
+    // `frames` 是编辑器层的装饰件（分组框 / 注释）。它**不参与代码生成**，
+    // 但必须跟着图一起存下来，否则重开材质后画布上的说明就没了。
+    passes.push({ name, graph: found?.graph ?? null, frames: normalizeFrames(found?.frames) });
   }
-  if (!passes.some((p) => p.name === 'image')) passes.unshift({ name: 'image', graph: null });
+  if (!passes.some((p) => p.name === 'image')) passes.unshift({ name: 'image', graph: null, frames: [] });
 
   return {
     id: typeof src.id === 'string' && src.id !== '' ? src.id : makeId('g'),
@@ -250,6 +340,12 @@ export function normalizeGraph(raw) {
     metadata: {
       version: typeof src.metadata?.version === 'string' ? src.metadata.version : '0.1.0',
       tags: Array.isArray(src.metadata?.tags) ? src.metadata.tags.filter((t) => typeof t === 'string') : [],
+      // 来源链接（Shadertoy 导入等会写）。只收非空字符串 —— 这个字段是要给人看的，
+      // 留个空串或 null 只会让 UI 上多一个空行。以前这里没有白名单，导入时写进去的
+      // 来源被**静默丢掉**了：不报错、不警告，用户以为记下来了其实没有。
+      ...(typeof src.metadata?.source === 'string' && src.metadata.source.trim() !== ''
+        ? { source: src.metadata.source.trim() }
+        : {}),
     },
     warnings,
   };
@@ -282,9 +378,20 @@ export function passSubgraph(graph, passName) {
 export function setPassNodes(graph, passName, nodeIds) {
   let pass = graph.passes.find((p) => p.name === passName);
   if (!pass) {
-    pass = { name: passName, graph: [] };
+    pass = { name: passName, graph: [], frames: [] };
     graph.passes.push(pass);
   }
   pass.graph = [...nodeIds];
   return graph;
+}
+
+/**
+ * 取某个 Pass 的装饰件（分组框 / 注释）。
+ * @param {object} graph
+ * @param {string} passName
+ * @returns {object[]}
+ */
+export function passFrames(graph, passName) {
+  const pass = graph.passes?.find((p) => p.name === passName);
+  return Array.isArray(pass?.frames) ? pass.frames : [];
 }

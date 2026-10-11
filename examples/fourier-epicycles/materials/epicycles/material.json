@@ -6,9 +6,10 @@
     "frag": "epicycles.frag"
   },
   "uniforms": {},
-  "textures": [],
+  "resources": [],
   "passes": [
-    "image"
+    "image",
+    "BufferA"
   ],
   "comfyWorkflows": [],
   "tags": [],

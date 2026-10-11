@@ -25,6 +25,7 @@ export class ParamsPanel {
    * @param {(nodeId: string, key: string, value: any) => void} opts.onParamChange
    * @param {() => string[]} [opts.getSelectedNodeIds]
    * @param {() => void} [opts.onUniformsChanged] 增删 uniform 后通知外部重建面板
+   * @param {(label: string, fn: () => void) => void} [opts.commit] 把一次图结构改动记成一步撤销
    */
   constructor(opts) {
     this.getGraph = opts.getGraph;
@@ -32,6 +33,8 @@ export class ParamsPanel {
     this.onParamChange = opts.onParamChange;
     this.getSelectedNodeIds = opts.getSelectedNodeIds ?? (() => []);
     this.onUniformsChanged = opts.onUniformsChanged ?? (() => {});
+    // 默认直接执行：不传 commit 的场合（测试、独立使用）行为不变
+    this.commit = opts.commit ?? ((_label, fn) => fn());
     this.root = h('div.swb-params');
     this.render();
   }
@@ -71,7 +74,9 @@ export class ParamsPanel {
             name = `uValue${i}`;
             i += 1;
           }
-          (this.getGraph().uniforms ??= []).push({ name, type: 'float', value: 0, min: 0, max: 1, ui: 'slider' });
+          this.commit('新增参数', () => {
+            (this.getGraph().uniforms ??= []).push({ name, type: 'float', value: 0, min: 0, max: 1, ui: 'slider' });
+          });
           this.onUniformsChanged();
           this.render();
         }, { variant: 'ghost' }),
@@ -85,7 +90,8 @@ export class ParamsPanel {
   _uniformRow(graph, uniform) {
     const type = uniform.type ?? 'float';
     const apply = (value, ui) => {
-      uniform.value = value;
+      // 不在这里直接写 uniform.value —— 交给 onUniformChange 一路走到编辑器的
+      // _commit，否则「改动前」快照已经含了新值，撤销栈根本认不出这次改动。
       if (ui) uniform.ui = ui;
       this.onUniformChange(uniform.name, value, type);
     };
@@ -103,11 +109,13 @@ export class ParamsPanel {
               return;
             }
             const old = uniform.name;
-            uniform.name = next;
             // 同步改掉引用了旧名字的 uniform 节点
-            for (const node of graph.nodes ?? []) {
-              if (node.type === 'uniform' && node.params?.name === old) node.params.name = next;
-            }
+            this.commit(`重命名参数 ${old} → ${next}`, () => {
+              uniform.name = next;
+              for (const node of graph.nodes ?? []) {
+                if (node.type === 'uniform' && node.params?.name === old) node.params.name = next;
+              }
+            });
             this.onUniformsChanged();
             this.render();
           },
@@ -122,16 +130,20 @@ export class ParamsPanel {
         ],
         type,
         (next) => {
-          uniform.type = next;
-          const size = next === 'float' ? 1 : Number(next.slice(3));
-          uniform.value = size === 1 ? 0 : new Array(size).fill(0).map((_, i) => (i === 3 ? 1 : 0));
+          this.commit(`改参数类型 ${type} → ${next}`, () => {
+            uniform.type = next;
+            const size = next === 'float' ? 1 : Number(next.slice(3));
+            uniform.value = size === 1 ? 0 : new Array(size).fill(0).map((_, i) => (i === 3 ? 1 : 0));
+          });
           this.onUniformsChanged();
           this.render();
         },
         { title: '类型' },
       ),
       button('×', () => {
-        graph.uniforms = (graph.uniforms ?? []).filter((u) => u !== uniform);
+        this.commit(`删除参数 ${uniform.name}`, () => {
+          graph.uniforms = (graph.uniforms ?? []).filter((u) => u !== uniform);
+        });
         this.onUniformsChanged();
         this.render();
       }, { variant: 'ghost', title: '删除这个参数' }),
@@ -366,8 +378,9 @@ export class ParamsPanel {
     const stored = node.params?.__defaults?.[port.id];
     const current = stored !== undefined ? stored : port.def;
     const commit = (next) => {
-      node.params.__defaults = { ...(node.params.__defaults ?? {}), [port.id]: next };
-      this.onParamChange(node.id, '__defaults', node.params.__defaults);
+      // 同样不在这里直接写 —— 让 onParamChange 走到编辑器里入栈，
+      // 否则快照已经含新值，这次改动在撤销栈里是隐形的
+      this.onParamChange(node.id, '__defaults', { ...(node.params?.__defaults ?? {}), [port.id]: next });
       this.render();
     };
     if (port.type === 'float') {

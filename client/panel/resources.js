@@ -212,23 +212,69 @@ export class ResourceBrowser {
 
   /** 改存储位置。 */
   async _promptStorageRoot() {
+     this.dialogHost?.remove();
     const info = this.settings ?? {};
     const current = info.settings?.workspaceRoot ?? info.root ?? '';
-    const next = window.prompt(
-      '存储位置（绝对路径，例如 D:\\Projects\\DSHP\\shader-workbench）\n留空则取消。',
-      current,
-    );
-    if (next === null) return;
-    const value = next.trim();
-    if (value === '') return;
-    try {
-      const result = await this.call('settings.write', { workspaceRoot: value });
-      this._setStatus(`存储位置已改为 ${result.root}`, 'ok');
-      await this.reload();
-      this.handlers.onWorkspaceChanged?.(result.root);
-    } catch (error) {
-      this._setStatus(`改存储位置失败：${messageOf(error)}`, 'error');
-    }
+
+    const input = h('input.swb-input.swb-dialog__input', {
+      type: 'text',
+      value: current,
+      placeholder: 'D:\\Projects\\DSHP\\shader-workbench',
+      spellcheck: 'false',
+    });
+
+    const close = () => {
+      this.dialogHost?.remove();
+      this.dialogHost = null;
+    };
+
+    const commit = async () => {
+      const value = input.value.trim();
+      if (value === '') {
+        this._setStatus('已取消（路径为空）', 'info');
+        close();
+        return;
+      }
+      close();
+      try {
+        const result = await this.call('settings.write', { workspaceRoot: value });
+        this._setStatus(`存储位置已改为 ${result.root}`, 'ok');
+        await this.reload();
+        this.handlers.onWorkspaceChanged?.(result.root);
+      } catch (error) {
+        this._setStatus(`改存储位置失败：${messageOf(error)}`, 'error');
+      }
+    };
+
+    const host = h('div.swb-dialog', {}, [
+      h('div.swb-snap__head', {}, [
+        h('strong', { text: '更改存储位置' }),
+        button('关闭', close, { variant: 'ghost' }),
+      ]),
+      h('div.swb-hint', {
+        text: '必须是绝对路径。工作区目录会在第一次写入时自动创建。',
+      }),
+      input,
+      h('div.swb-dialog__actions', {}, [
+        button('确定', () => void commit(), { variant: 'primary' }),
+        button('取消', close, { variant: 'ghost' }),
+      ]),
+    ]);
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void commit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+
+    this.dialogHost = host;
+    this.root.append(host);
+    input.focus();
+    input.select?.();
   }
 
   /** 清掉手动设置。 */
@@ -393,7 +439,7 @@ export class ResourceBrowser {
   /** 材质一行。 */
   _materialRow(project, material, current) {
     const active = current.project === project.name && current.material === material.name;
-    const textureCount = material.textures?.length ?? 0;
+     const resourceCount = material.resourceCount ?? 0;
     const row = h('div.swb-tree__row.swb-tree__row--material', {
       class: active ? 'swb-tree__row--current' : undefined,
       title: material.updatedAt ? `更新于 ${timeAgo(material.updatedAt)}` : material.name,
@@ -405,7 +451,7 @@ export class ResourceBrowser {
         },
       },
     }, [
-      h('span.swb-tree__caret', { text: textureCount > 0 ? `${textureCount}▣` : '▢' }),
+     h('span.swb-tree__caret', { text: resourceCount > 0 ? `${resourceCount}▣` : '▢' }),
       h('span.swb-tree__name', { text: material.title || material.name }),
     ]);
     return row;
@@ -417,22 +463,161 @@ export class ResourceBrowser {
       menuItem('打开', () => this.handlers.onOpen?.(project, material)),
       menuItem('保存当前图到这个材质', () => this.handlers.onSaveTo?.(project, material)),
       h('div.swb-menu__sep'),
+      menuItem('导出为…', () => this._exportMenu(project, material, e.clientX, e.clientY)),
+      menuItem('导出 ZIP…', () => this._exportZip(project, material)),
+      h('div.swb-menu__sep'),
       menuItem('打快照', () => this._snapshot(project, material)),
       menuItem('查看快照…', () => this._showSnapshots(project, material)),
       h('div.swb-menu__sep'),
       menuItem('导入纹理…', () => this._pickTexture(project, material)),
       menuItem('导入材质文件…', () => this._importMaterial(project, material)),
+      menuItem('从 Shadertoy 导入…', () => this._importShadertoy(project, material)),
       h('div.swb-menu__sep'),
       menuItem('归档到 .trash（不删除）', () => this._archive(project, material), { tone: 'danger' }),
     ];
     popup(items, e.clientX, e.clientY);
   }
 
+  /**
+   * 导出格式的子菜单。
+   *
+   * 目标列表是**问 host 要**的，不写死 —— 导出目标走的是注册机制，
+   * 面板这边写死一份就会和实际能力脱节（以后加目标还得改两处）。
+   */
+  async _exportMenu(project, material, x, y) {
+    try {
+      const { targets } = await this.call('material.exportTargets', {});
+      const items = targets.map((t) => menuItem(
+        `${t.label}  (.${t.extension})`,
+        () => this._export(project, material, t),
+      ));
+      popup(items, x, y);
+    } catch (error) {
+      this._setStatus(`取导出目标失败：${messageOf(error)}`, 'error');
+    }
+  }
+
+  /** 真导出一次。产物落在材质目录里；二进制顺手触发一次下载。 */
+  async _export(project, material, target) {
+    try {
+      const res = await this.call('material.export', { project, material, target: target.id });
+      if (target.binary) {
+        const bytes = Uint8Array.from(atob(res.data), (c) => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = res.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+        this._setStatus(`已导出 ${res.fileName}（${res.bytes} 字节）→ ${res.path}`, 'ok');
+      } else {
+        this._setStatus(`已导出 ${res.fileName} → ${res.path}`, 'ok');
+      }
+    } catch (error) {
+      this._setStatus(`导出失败：${messageOf(error)}`, 'error');
+    }
+  }
+
+  /**
+   * 把整个材质目录打包下载。
+   *
+   * 打包在 host 那侧做（零依赖自研 ZIP，store 模式），面板只负责把 base64
+   * 还原成字节再触发下载 —— 这样「打包」这件事只有一份实现。
+   */
+  async _exportZip(project, material) {
+    try {
+      const res = await this.call('material.exportZip', { project, material });
+      this._download(res.data, res.fileName, 'application/zip');
+      const where = res.path ? ` → ${res.path}` : '（只读工作区，没有落盘）';
+      this._setStatus(`已导出 ${res.fileName}：${res.fileCount} 个条目 / ${res.bytes} 字节${where}`, 'ok');
+    } catch (error) {
+      this._setStatus(`导出 ZIP 失败：${messageOf(error)}`, 'error');
+    }
+  }
+
+  /** 从 base64 触发一次浏览器下载。 */
+  _download(base64, fileName, mime = 'application/octet-stream') {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    // 立刻 revoke 在部分浏览器里会打断下载，挪到下一帧
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  /**
+   * 从 Shadertoy 源码导入。
+   *
+   * 用 textarea 而不是 `window.prompt`：Shadertoy 的代码是几百行的多行文本，
+   * prompt 是单行的，粘进去就废了。
+   *
+   * 导入会**替换**当前材质的图，所以先弹一句确认。
+   */
+  _importShadertoy(project, material) {
+    this.dialogHost?.remove();
+    const area = h('textarea.swb-input.swb-dialog__text', {
+      spellcheck: 'false',
+      placeholder: '把 Shadertoy 的源码整段粘进来（要包含 void mainImage(out vec4 fragColor, in vec2 fragCoord)）',
+    });
+    const urlInput = h('input.swb-input.swb-dialog__input', { type: 'text', placeholder: '来源链接（可留空）' });
+    const close = () => {
+      this.dialogHost?.remove();
+      this.dialogHost = null;
+    };
+    const host = h('div.swb-dialog', {}, [
+      h('div.swb-snap__head', {}, [
+        h('strong', { text: `从 Shadertoy 导入 → ${project} / ${material}` }),
+        button('关闭', close, { variant: 'ghost' }),
+      ]),
+      h('div.swb-hint', { text: '导入会替换这个材质当前的节点图（先打快照可以找回）。' }),
+      area,
+      urlInput,
+      h('div.swb-dialog__actions', {}, [
+        button('导入', async () => {
+          const source = area.value ?? '';
+          if (source.trim() === '') {
+            this._setStatus('源码是空的', 'error');
+            return;
+          }
+          try {
+            const res = await this.call('material.importShadertoy', {
+              project,
+              material,
+              source,
+              ...(urlInput.value.trim() ? { sourceUrl: urlInput.value.trim() } : {}),
+            });
+            close();
+            await this.reload();
+            this.handlers.onRestored?.(project, material);
+            const feats = res.features ?? {};
+            const bits = [];
+            if (feats.channels?.length) bits.push(`通道 ${feats.channels.join('/')}`);
+            if (feats.buffers?.length) bits.push(`Buffer ${feats.buffers.join('/')}`);
+            const warnings = res.warnings ?? [];
+            this._setStatus(
+              `已导入为节点 ${res.nodeType}${bits.length ? `（用到 ${bits.join('，')}）` : ''}`
+              + (warnings.length ? `；提醒：${warnings.join(' / ')}` : ''),
+              warnings.length > 0 ? 'info' : 'ok',
+            );
+          } catch (error) {
+            this._setStatus(`导入失败：${messageOf(error)}`, 'error');
+          }
+        }),
+        button('取消', close, { variant: 'ghost' }),
+      ]),
+    ]);
+    this.dialogHost = host;
+    this.root.append(host);
+    area.focus();
+  }
+
   // ─────────────────────── 动作 ───────────────────────
 
   /** 新建项目。 */
   async _promptCreateProject() {
-    const name = window.prompt('项目名（字母/数字/下划线/连字符）');
+    const name = window.alert('项目名（字母/数字/下划线/连字符）');
     if (!name) return;
     try {
       await this.call('project.create', { name: name.trim() });
@@ -446,7 +631,7 @@ export class ResourceBrowser {
 
   /** 新建材质。 */
   async _promptCreateMaterial(project) {
-    const name = window.prompt(`在「${project}」里新建材质，名字：`);
+    const name = window.alert(`在「${project}」里新建材质，名字：`);
     if (!name) return;
     try {
       await this.call('material.create', { project, name: name.trim() });
@@ -462,7 +647,7 @@ export class ResourceBrowser {
   /** 打快照。 */
   async _snapshot(project, material) {
     try {
-      const label = window.prompt('快照标签（可留空）') ?? '';
+      const label = window.alert('快照标签（可留空）') ?? '';
       const result = await this.call('material.snapshot', { project, material, label: label.trim() });
       this._setStatus(`已打快照 ${result.id}`, 'ok');
     } catch (error) {
@@ -564,7 +749,7 @@ export class ResourceBrowser {
       const file = input.files?.[0];
       input.remove();
       if (!file) return;
-      const slot = window.prompt('绑定到哪个通道？iChannel0 / iChannel1 / iChannel2 / iChannel3', 'iChannel0');
+      const slot = window.alert('绑定到哪个通道？iChannel0 / iChannel1 / iChannel2 / iChannel3', 'iChannel0');
       if (!slot) return;
       await this.handlers.onImportTexture?.(project, material, file, slot.trim());
     });

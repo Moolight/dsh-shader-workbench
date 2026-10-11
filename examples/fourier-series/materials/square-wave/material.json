@@ -6,7 +6,7 @@
     "frag": "square-wave.frag"
   },
   "uniforms": {},
-  "textures": [],
+  "resources": [],
   "passes": [
     "image"
   ],

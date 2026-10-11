@@ -33,6 +33,8 @@ import {
   setPassNodes,
 } from '../shared/index.js';
 import { compileGraph } from '../client/runtime/codegen.js';
+import { crossCompile, listExportTargets } from '../shared/cross-compile.js';
+import { importShadertoy } from '../shared/shadertoy-import.js';
 
 /** Cordis 插件名。 */
 export const name = PLUGIN_ID;
@@ -835,7 +837,14 @@ function applyInner(ctx, config = {}) {
   registerTool({
     name: 'shader_export',
     description:
-      'Export a material for use outside the workbench: writes shader.frag (the generated GLSL for a pass), graph.json and material.json into the material folder, and returns the full shader text. HLSL / MSL / SPIR-V targets are not implemented in this version.',
+      'Export a material for use outside the workbench: compiles a pass and writes the result into the material folder. '
+      + 'Targets: glsl (shader.frag, the generated GLSL), hlsl (Shader Model 5.0), msl (Metal), spirv (.spv binary), '
+      + 'spvasm (readable SPIR-V assembly), json (a self-contained bundle of manifest + graph). '
+      + 'The HLSL / MSL / SPIR-V output is produced by this plugin\'s own source-level translator and binary encoder — '
+      + 'no external shader toolchain is required or used. '
+      + 'IMPORTANT: the .spv binary has only been checked for structural self-consistency (id bounds, block termination, '
+      + 'branch targets, encoder/decoder round-trip). No spirv-val was available, so it is NOT guaranteed to be accepted '
+      + 'by a real driver — validate it with `spirv-val` on a machine that has the Vulkan SDK before shipping it.',
     parameters: {
       type: 'object',
       properties: {
@@ -844,8 +853,10 @@ function applyInner(ctx, config = {}) {
         pass: { type: 'string', enum: PASS_NAMES, description: 'Pass to export. Defaults to image.' },
         target: {
           type: 'string',
-          enum: ['glsl', 'json'],
-          description: 'glsl (default) writes shader.frag; json writes a self-contained bundle.',
+          enum: [...listExportTargets().map((t) => t.id), 'json'],
+          description:
+            'Export format. Defaults to glsl. Use shader_export_targets to list the currently registered targets '
+            + '(the registry is extensible, so this enum may grow).',
         },
       },
       required: ['project', 'material'],
@@ -857,33 +868,154 @@ function applyInner(ctx, config = {}) {
       return guard(async () => {
         const material = await workspace.readMaterial(args.project, args.material);
         const passName = args.pass ?? 'image';
+        const targetId = args.target ?? 'glsl';
+        const generatedAt = new Date().toISOString();
+
+        // json 不转译：它就是「图 + 清单」的自包含快照
+        if (targetId === 'json') {
+          const bundle = {
+            material: material.manifest,
+            graph: material.graph,
+            pass: passName,
+            generatedAt,
+            generator: `${PLUGIN_ID}@${version}`,
+          };
+          const bundleName = `${args.material}.${passName}.bundle.json`;
+          const bundlePath = await workspace.write(
+            workspace.materialFile(args.project, args.material, bundleName),
+            `${JSON.stringify(bundle, null, 2)}\n`,
+          );
+          return { ok: true, target: 'json', path: bundlePath, fileName: bundleName };
+        }
+
         const compiled = exportShader(material.graph, passName);
         if (!compiled.ok) {
           return { ok: false, errors: compiled.errors, note: '图还没编译通过，没有写出文件' };
         }
-        const fragName = material.manifest.shaderFiles.frag || 'shader.frag';
-        const fragPath = await workspace.write(
-          workspace.materialFile(args.project, args.material, fragName),
-          compiled.code,
+
+        const target = listExportTargets().find((t) => t.id === targetId);
+        if (!target) {
+          return {
+            ok: false,
+            errors: [{ message: `不认识的导出目标：${targetId}` }],
+            available: listExportTargets().map((t) => t.id),
+          };
+        }
+
+        const converted = crossCompile(compiled.code, targetId, {
+          source: `${args.project}/${args.material}::${passName}`,
+          generatedAt,
+        });
+        if (!converted.ok) {
+          return {
+            ok: false,
+            errors: converted.errors,
+            note: `导出 ${targetId} 失败：${converted.errors.map((e) => e.message).join('；')}`,
+          };
+        }
+
+        // glsl 沿用材质清单里声明的文件名，其余按目标扩展名命名
+        const fileName = targetId === 'glsl'
+          ? (material.manifest.shaderFiles?.frag || 'shader.frag')
+          : `${args.material}.${passName}.${target.extension}`;
+        const full = await workspace.write(
+          workspace.materialFile(args.project, args.material, fileName),
+          converted.code,
         );
-        const bundle = {
-          material: material.manifest,
-          graph: material.graph,
-          pass: passName,
-          generatedAt: new Date().toISOString(),
-          generator: `${PLUGIN_ID}@${version}`,
+
+        const result = {
+          ok: true,
+          target: targetId,
+          path: full,
+          fileName,
+          binary: target.binary,
+          warnings: converted.warnings,
         };
-        const bundleName = `${args.material}.${passName}.bundle.json`;
-        const bundlePath = await workspace.write(
-          workspace.materialFile(args.project, args.material, bundleName),
-          `${JSON.stringify(bundle, null, 2)}\n`,
-        );
+        if (target.binary) {
+          result.bytes = converted.code.byteLength;
+          result.note = 'SPIR-V 只做过结构自洽校验，没有经过 spirv-val。上真机前请自己验一遍。';
+        } else {
+          result.code = converted.code;
+        }
+        return result;
+      });
+    },
+  });
+
+  registerTool({
+    name: 'shader_export_targets',
+    description:
+      'List the export targets currently registered by the Shader Workbench (id, label, file extension, whether the '
+      + 'output is binary). Targets are pluggable, so this is the authoritative list — use it instead of assuming.',
+    parameters: { type: 'object', properties: {}, additionalProperties: false },
+    output: toolOutput(),
+    async execute() {
+      return {
+        targets: listExportTargets().map((t) => ({
+          id: t.id,
+          label: t.label,
+          extension: t.extension,
+          binary: t.binary,
+        })),
+      };
+    },
+  });
+
+  registerTool({
+    name: 'shader_shadertoy_import',
+    description:
+      'Import a Shadertoy shader into a Shader Workbench material. Paste the full Shadertoy source (the one that '
+      + 'contains `void mainImage(out vec4 fragColor, in vec2 fragCoord)`); the import finds mainImage, wraps it into a '
+      + 'value-returning function, registers the wrapped GLSL as a reusable **user node** in the workspace library, and '
+      + 'replaces the target material\'s graph with a two-node graph (the imported node wired to the output terminal). '
+      + 'Shadertoy builtins iTime / iResolution / iMouse / iDate / iChannel0-3 / iFrame are already provided by the '
+      + 'generated header, so most shaders work unchanged. '
+      + 'Notes: a source-supplied `void main()` is stripped (it would clash with the generated entry point); naked '
+      + '`return;` statements are rewritten to `return fragColor;`; iChannel usage is reported so you know which texture '
+      + 'slots to bind. The graph is REPLACED, not merged — snapshot the material first if you want to keep the old one.',
+    parameters: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Project name.' },
+        material: { type: 'string', description: 'Material to overwrite with the imported graph.' },
+        source: { type: 'string', description: 'The full Shadertoy GLSL source text.' },
+        nodeType: {
+          type: 'string',
+          description: 'Override the generated user-node type name. Defaults to `shadertoyMain`.',
+        },
+        sourceUrl: { type: 'string', description: 'Optional origin URL, recorded in the graph metadata.' },
+      },
+      required: ['project', 'material', 'source'],
+      additionalProperties: false,
+    },
+    output: toolOutput(),
+    async execute(args, exec) {
+      const workspace = workspaceFor(exec);
+      return guard(async () => {
+        const imported = importShadertoy(args.source, {
+          name: args.material,
+          ...(args.nodeType ? { nodeType: args.nodeType } : {}),
+          ...(args.sourceUrl ? { sourceUrl: args.sourceUrl } : {}),
+        });
+
+        const nodePath = await workspace.writeUserNode(imported.node.type, imported.node);
+        await workspace.saveMaterial({
+          project: args.project,
+          material: args.material,
+          graph: imported.graph,
+        });
+        syncUserNodes(workspace, { force: true });
+
         return {
           ok: true,
-          target: args.target ?? 'glsl',
-          fragPath,
-          bundlePath,
-          shader: compiled.code,
+          nodeType: imported.node.type,
+          nodePath: workspace.rel(nodePath),
+          features: imported.features,
+          warnings: imported.warnings,
+          nodeCount: imported.graph.nodes.length,
+          edgeCount: imported.graph.edges.length,
+          userNodeTypes: nodeLibraryStatus(workspace).user,
+          note: '材质图已被替换；原来的图如果还要，请从 .snapshots 里恢复。',
         };
       });
     },

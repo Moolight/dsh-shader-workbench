@@ -63,13 +63,15 @@
 demo/
 ├── project.json
 └── materials/phantom-star/
-    ├── graph.json                     节点图（uv + time → ifsTunnel → output）
+    ├── graph.json                     节点图（uv + time → group(重复组, repeat=99) → output，10 个节点）
     ├── material.json                  材质清单
     ├── phantom-star.frag              这个图生成的 GLSL（对照用）
     └── preview.png                    真机跑出来的样子
 ```
 
-图里只有 4 个节点，重活全在 `ifsTunnel` 节点的 `glslPrelude` 里：
+图里 10 个节点（`uv` / `time` / `custom` / `group` / `output`），重活封在一个**重复组**里：
+`repeat = 99`，循环体用 `custom` 节点写 IFS 折叠与累积辉光，99 步只写一遍（和原版逐像素一致）。
+下面这些量仍可调：
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
@@ -126,10 +128,13 @@ demo/
 （DFT 是 O(N²)，每个像素现算不可能）；重烤走
 `node scripts/bake-fourier-epicycles.mjs`。
 
-> 三个示例的节点图都只有 4 个节点（`uv` + `time` → 节点 → `output`），
-> 重活全在节点的 `glslPrelude` 里 —— 因为生成器给每个节点写的是
-> **单条表达式** `vec4 x = <表达式>;`，循环装不进去，只能以 GLSL 函数的形式
-> 注入到 `main()` 之前。要加带循环的节点都走这条路（见 `docs/架构说明.md` 7.1）。
+> 三个傅里叶示例都是**纯节点链**，不再是黑盒：
+> `fourier-series` 10 个节点（每个奇次谐波一个 `custom`）、
+> `fourier-spectrum` 12 个节点（每根柱一个）、
+> `fourier-epicycles` 49 个节点（每个旋转向量一个 `custom` + BufferA 反馈）。
+> 系数来自 `shared/fourier-data.js`（对参数曲线做 DFT 烘焙进来，DFT 是 O(N²)，
+> 每个像素现算不可能；重烤走 `node scripts/bake-fourier-epicycles.mjs`）。
+> 这正是「效果应该是图、不是代码」的示范——想加一项谐波就再加一个 `custom` 节点。
 
 ---
 
@@ -185,5 +190,47 @@ demo/
 > 改完重跑一遍会重新生成示例 + 校验用的 `.frag`。
 > 真机校验走多 Pass 探针（`scripts/.effect-demos/probe.html`）：
 > 把 BufferA 渲进离屏纹理再喂给 image，和面板里的渲染顺序一致。
+
+---
+
+## music — FFT 音频可视化
+
+一个**双 Pass** 的音乐可视化：BufferA 攒轨迹、image 叠频谱条与波形。
+画面由 `iChannel0` 上的音频 FFT 驱动。
+
+**音源要自己载入**（音频几十兆，不随插件分发），示例里也**不带歌词文件** ——
+载入一份 `.lrc` 就生效。曲子是 *world.execute(me)*。
+
+```
+music/
+├── project.json
+└── materials/music/
+    ├── graph.json      节点图（22 个节点，BufferA + image 两个 Pass）
+    ├── material.json   材质清单
+    └── music.frag      image Pass 生成的 GLSL（对照用）
+```
+
+画布上 22 个节点、两个 Pass，**一个新节点都没加**：
+
+- **BufferA（攒）**：极坐标变换 → 三个**频谱环**（半径跟着 `iChannel0` 的 FFT 采样浮动）
+  → 一段**笔尖轨迹**累积。轨迹用 `repeat = 64` 的**重复组**采样过去 0.128 秒的位置，
+  循环体只写一遍，靠 `carries` 把"到目前为止的最小距离"跨迭代传下去；
+  结果再和上一帧 `bufferSample` 混合，就成了拖尾。
+- **image（显示）**：BufferA 的结果 + 96 根**频谱条** + 一条**波形线**，按音频能量染色。
+
+看这张图的三处关键：
+
+1. **FFT 从哪来**：就是 `texture(iChannel0, vec2(x, 0.0))` —— 按 Shadertoy 的约定，
+   音频频谱放在 iChannel0 这一行的不同横坐标上。所以在节点图里，
+   "接音频"这件事只是 `custom` 节点里写一次 `texture(iChannel0, ...)`，不用加节点。
+2. **轨迹为什么要 BufferA**：image Pass 只知道"这一帧"，画不出"这一秒画过什么"。
+   跨帧累积必须有个缓冲区把上一帧留住 —— BufferA 干这个，image 用 `bufferSample` 取回。
+3. **歌词不在 GLSL 里**：这个示例能配歌词层（自己导一份 `.lrc`）。
+   中文进 GLSL 要么预烤字体纹理、要么上 SDF；HTML 层天然支持，还能用 CSS 做
+   KTV 高亮，所以歌词是叠在 canvas 上的 HTML，详见
+   [使用手册 · 资源](../docs/使用手册.md)。
+
+> 这个示例同样守着那条纪律：64 个历史位置是**一个重复组**，不是 64 份节点复制。
+> （另：`music` 目前**没有 `preview.png`** —— 预览图要真机 GPU 渲染，示例本身是能跑的。）
 
 

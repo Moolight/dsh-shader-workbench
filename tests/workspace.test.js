@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 
 import { Workspace, assertSafeName } from '../host/workspace.js';
-import { makeEdge, makeNode, setPassNodes, makeGraph } from '../shared/graph.js';
+import { makeEdge, makeFrame, makeNode, setPassNodes, makeGraph } from '../shared/graph.js';
 import { compileGraph } from '../client/runtime/codegen.js';
 
 const tempRoot = await mkdtemp(join(tmpdir(), 'shader-wb-test-'));
@@ -95,6 +95,49 @@ test('完整流程：建工作区 → 建项目 → 建材质 → 存图 → 读
   assert.match(compiled.code, /void main\(\)/);
 });
 
+test('分组框 / 注释跟着图落盘，重开还在（FR-01）', async () => {
+  await workspace.init();
+  await workspace.createProject({ name: 'anno', title: '批注' });
+  await workspace.createMaterial({ project: 'anno', name: 'framed', title: '带批注' });
+
+  const uv = makeNode('uv', 0, 0);
+  const out = makeNode('output', 320, 0);
+  const graph = makeGraph({ name: 'framed', nodes: [uv, out], edges: [makeEdge(uv.id, 'out', out.id, 'color')] });
+  setPassNodes(graph, 'image', [uv.id, out.id]);
+
+  // 装饰件是编辑器层的东西：不进代码生成，但必须落盘
+  const pass = graph.passes.find((p) => p.name === 'image');
+  pass.frames = [
+    makeFrame('frame', -20, 60, { title: '光照部分', color: 'violet', w: 400, h: 240 }),
+    makeFrame('note', 460, 380, { text: '这里换成双向反射分布函数试试', color: 'amber' }),
+  ];
+
+  const codeBefore = compileGraph(graph, 'image').code;
+
+  await workspace.saveMaterial({ project: 'anno', material: 'framed', graph });
+  const read = await workspace.readMaterial('anno', 'framed');
+  const readPass = read.graph.passes.find((p) => p.name === 'image');
+
+  assert.equal(readPass.frames.length, 2, `装饰件该跟着图一起存下来：${JSON.stringify(readPass.frames)}`);
+  const frame = readPass.frames.find((f) => f.kind === 'frame');
+  const note = readPass.frames.find((f) => f.kind === 'note');
+  assert.equal(frame.title, '光照部分');
+  assert.equal(frame.color, 'violet');
+  assert.equal(frame.w, 400);
+  assert.equal(note.text, '这里换成双向反射分布函数试试');
+
+  // 装饰件不该改变生成的代码 —— 这是「分组框 ≠ group 元节点」的硬边界
+  assert.equal(compileGraph(read.graph, 'image').code, codeBefore, '装饰件不该影响生成的 GLSL');
+
+  // 老材质（没有 frames 字段）读回来也要能用，而不是 undefined 炸掉
+  const legacy = makeGraph({ name: 'legacy', nodes: [uv], edges: [] });
+  delete legacy.passes.find((p) => p.name === 'image').frames;
+  await workspace.createMaterial({ project: 'anno', name: 'legacy', title: '老图' });
+  await workspace.saveMaterial({ project: 'anno', material: 'legacy', graph: legacy });
+  const legacyRead = await workspace.readMaterial('anno', 'legacy');
+  assert.deepEqual(legacyRead.graph.passes.find((p) => p.name === 'image').frames, [], '老图该补成空数组');
+});
+
 test('快照与回滚', async () => {
   const snap = await workspace.snapshot({ project: 'demo', material: 'plasma', label: 'v1' });
   assert.equal(snap.ok, true);
@@ -134,10 +177,11 @@ test('导入纹理：拷进 textures/ 并写回清单', async () => {
   assert.equal(result.ok, true);
   assert.equal(result.ref.slot, 'iChannel1');
   assert.equal(result.ref.path, 'textures/albedo.png');
-  assert.equal(result.ref.source, 'local');
+  assert.equal(result.ref.meta.source, 'local');
 
   const read = await workspace.readMaterial('demo', 'plasma');
-  assert.equal(read.manifest.textures.length, 1);
+  // 引用统一在 resources[] 里；`textures` 只是磁盘上 textures/ 的文件清单
+  assert.equal(read.manifest.resources.filter((r) => r.type === 'texture').length, 1);
   assert.equal(read.textures.length, 1);
 
   // 源文件必须原封不动
@@ -146,7 +190,7 @@ test('导入纹理：拷进 textures/ 并写回清单', async () => {
   // 同槽位再导一次 → 清单里仍只有一条
   await workspace.importTexture({ project: 'demo', material: 'plasma', sourcePath, slot: 'iChannel1' });
   const again = await workspace.readMaterial('demo', 'plasma');
-  assert.equal(again.manifest.textures.length, 1);
+  assert.equal(again.manifest.resources.filter((r) => r.type === 'texture').length, 1);
   assert.equal(again.textures.length, 2, '第二次导入应另存一个带序号的副本');
 
   // 解绑：只摘清单，不删文件
@@ -161,7 +205,7 @@ test('不支持的文件扩展名被拒', async () => {
   await writeFile(badPath, 'nope');
   await assert.rejects(
     () => workspace.importTexture({ project: 'demo', material: 'plasma', sourcePath: badPath, slot: 'iChannel0' }),
-    /不支持的纹理格式/,
+    /不支持/,
   );
 });
 

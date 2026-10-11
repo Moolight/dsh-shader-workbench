@@ -199,6 +199,46 @@ export const CSS = `
   flex: 0 0 auto;
 }
 .swb-editor__tabs { display: flex; gap: 3px; flex-wrap: wrap; }
+.swb-editor__toolsep { width: 1px; height: 16px; background: var(--swb-border-2); margin: 0 2px; flex: 0 0 auto; }
+
+/* 工具条上的小图标按钮（撤销 / 重做） */
+.swb-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  color: var(--swb-fg-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--swb-radius);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.swb-iconbtn:hover:enabled { color: var(--swb-fg); background: var(--swb-bg-3); border-color: var(--swb-border-2); }
+.swb-iconbtn:disabled { opacity: 0.35; cursor: default; }
+
+/* 画布上就地编辑分组框标题 / 注释正文 */
+.swb-canvas-editor {
+  position: absolute;
+  z-index: 6;
+  margin: 0;
+  padding: 2px 5px;
+  color: var(--swb-fg);
+  background: var(--swb-bg);
+  border: 1px solid var(--swb-accent);
+  border-radius: var(--swb-radius);
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.35;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
 .swb-tab {
   font: inherit;
   font-size: 12px;
@@ -214,6 +254,8 @@ export const CSS = `
 .swb-tab--add { color: var(--swb-fg-3); border-style: dashed; border-color: var(--swb-border); }
 .swb-editor__status { font-family: var(--swb-mono); font-size: 11.5px; color: var(--swb-fg-3); }
 .swb-editor__status[data-tone="error"] { color: var(--swb-danger); }
+.swb-editor__status[data-tone="warn"] { color: var(--swb-warn); }
+.swb-editor__status[data-tone="ok"] { color: var(--swb-ok); }
 .swb-editor__main { display: flex; flex: 1 1 auto; min-height: 0; }
 .swb-editor__side {
   flex: 0 0 178px;
@@ -400,6 +442,39 @@ export const CSS = `
 .swb-snap__row { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 5px 0; border-top: 1px dashed var(--swb-border); }
 .swb-snap__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .swb-snap__meta code { font-family: var(--swb-mono); font-size: 11.5px; word-break: break-all; }
+
+/* ── 弹窗（多行输入，比如粘 Shadertoy 源码） ── */
+.swb-dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, 88%);
+  max-height: 82%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  background: var(--swb-bg-2);
+  border: 1px solid var(--swb-border-2);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+  padding: 12px;
+  z-index: 40;
+}
+.swb-dialog__text {
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  font-family: var(--swb-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+.swb-dialog__input { width: 100%; font-family: var(--swb-mono); font-size: 12px; }
+.swb-dialog__actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* ── 诊断 ── */
 .swb-diag { padding: 4px 0 8px; }
