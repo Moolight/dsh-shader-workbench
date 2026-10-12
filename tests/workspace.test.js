@@ -38,8 +38,10 @@ test('assertSafeName 挡住路径穿越与保留名', () => {
 test('workspace.path 拒绝越界路径', () => {
   assert.throws(() => workspace.path('..', 'outside'), /越出工作区/);
   assert.throws(() => workspace.path('projects', '..', '..', '..', 'x'), /越出工作区/);
-  assert.throws(() => workspace.path('C:\\Windows'), /绝对路径/);
-  assert.throws(() => workspace.path('/etc/passwd'), /绝对路径/);
+  // 绝对路径按当前平台判：守卫用的是 Node 的 isAbsolute（平台相关）。
+  // Windows 认 `C:\` 前缀，POSIX 认 `/` 前缀 —— 写死成其中一种，另一种平台必然红。
+  const absolute = process.platform === 'win32' ? 'C:\\Windows' : '/etc/passwd';
+  assert.throws(() => workspace.path(absolute), /绝对路径/);
   // 正常路径要能过
   assert.ok(workspace.path('projects', 'demo').includes('projects'));
 });
@@ -214,7 +216,9 @@ test('纹理路径穿越被拒', () => {
     () => workspace.textureAbsolutePath('demo', 'plasma', '../../../../etc/passwd'),
     /非法纹理路径/,
   );
-  assert.throws(() => workspace.textureAbsolutePath('demo', 'plasma', 'C:/Windows/win.ini'), /非法纹理路径/);
+  // 绝对路径按当前平台判（同上：isAbsolute 是平台相关的）
+  const absolute = process.platform === 'win32' ? 'C:/Windows/win.ini' : '/etc/passwd';
+  assert.throws(() => workspace.textureAbsolutePath('demo', 'plasma', absolute), /非法纹理路径/);
 });
 
 test('归档是移动而不是删除', async () => {

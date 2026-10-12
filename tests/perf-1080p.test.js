@@ -525,6 +525,13 @@ function isEnvCode(code) {
 // ─────────────────────── 测试 ───────────────────────
 
 test('1080p 预览帧率与隐藏时空转', async (t) => {
+  // 共享 CI runner 没有 GPU，只能走 SwiftShader 软件渲染：1080p 重负载图
+  // 3 秒只出得了个位数到二十几帧，帧率阈值在这里没有参考价值。这是**基准**不是
+  // 正确性断言，所以 CI 直接跳过；本机（尤其有独显时）跑才有意义。
+  if (process.env.CI) {
+    t.skip('CI 无 GPU（软件渲染），跳过 1080p 性能基准');
+    return;
+  }
   if (!browser) {
     t.skip('找不到 Chromium 内核浏览器，跳过 1080p 性能测试');
     return;
