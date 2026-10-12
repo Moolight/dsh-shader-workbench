@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 测试与打包校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 零第三方运行时依赖，不需要 install 步骤。
+      # 真机浏览器测试（glsl-compile / panel-smoke / render-gpu / editor-* / perf-1080p）
+      # 在无浏览器的 CI 环境下会自动跳过，而不是假失败。
+      - name: 跑全部测试
+        run: node --test "tests/*.test.js"
+
+      # 沙箱兜底 runner（同进程顺序 import）也跑一遍。
+      # 两种 runner 行为不同（见 docs/开发与验证.md），只过一种是假绿。
+      - name: 跑兜底 runner
+        run: node scripts/run-tests.mjs
+
+      # 证明发布产物包含入口与 Cordis patch —— files 白名单没漏东西，
+      # 装到别人机器上不会只剩 src/。
+      - name: 校验发布产物
+        run: |
+          npm pack
+          tar -tzf dsh-shader-workbench-*.tgz | grep -q 'package/host/index.js'
+          tar -tzf dsh-shader-workbench-*.tgz | grep -q 'package/cordis.patch.yml'
+          tar -tzf dsh-shader-workbench-*.tgz | grep -q 'package/shared/index.js'
